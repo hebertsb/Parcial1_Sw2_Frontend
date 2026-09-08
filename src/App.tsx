@@ -5,9 +5,11 @@
 
 import { useState } from 'react';
 import { CineProvider, useCine } from './controllers/CineContext';
+import { useAuth } from './controllers/AuthContext';
 import { Home } from './views/Home';
 import { Cartelera } from './views/Cartelera';
 import { ProcesoCompra } from './views/ProcesoCompra';
+import { Login } from './views/Login';
 import { AdminAccess } from './views/AdminAccess';
 import { AdminConsole } from './views/AdminConsole';
 import { VoiceAgent } from './views/VoiceAgent';
@@ -16,19 +18,44 @@ import { TopModeSwitcher } from './components/widgets/TopModeSwitcher';
 
 const CineApp = () => {
   const { state, dispatch } = useCine();
-  const [view, setView] = useState<'home' | 'app' | 'admin' | 'admin_console' | 'voice'>('home');
+  const { usuario, logout } = useAuth();
+  const [view, setView] = useState<'home' | 'app' | 'admin' | 'admin_console' | 'voice' | 'login'>('home');
   const [interactionMode, setInteractionMode] = useState<'tactil' | 'hibrido' | 'voz'>('tactil');
   const [showTechModal, setShowTechModal] = useState(false);
+  const [afterLoginAction, setAfterLoginAction] = useState<(() => void) | null>(null);
 
   const navigateToCartelera = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
     setView('app');
   };
-  
+
   const goHome = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
     setView('home');
   };
+
+  /** Comprar y los modos voz/híbrido requieren cuenta de Google — ver Login.tsx. Cartelera/Home nunca pasan por acá. */
+  const requireAuth = (accion: () => void) => {
+    if (usuario) {
+      accion();
+      return;
+    }
+    setAfterLoginAction(() => accion);
+    setView('login');
+  };
+
+  const cambiarModoInteraccion = (m: 'tactil' | 'hibrido' | 'voz') => {
+    if (m === 'tactil') {
+      setInteractionMode(m);
+      return;
+    }
+    requireAuth(() => {
+      setInteractionMode(m);
+      if (m === 'voz') setView('voice');
+    });
+  };
+
+  const irAModoVoz = () => requireAuth(() => setView('voice'));
 
   const hasSelectedMovie = !!state.peliculaSeleccionada;
 
@@ -100,6 +127,25 @@ const CineApp = () => {
               <div className="flex items-center px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface font-label-code text-label-code font-bold tracking-wider">
                 ES
               </div>
+              {usuario ? (
+                <button
+                  onClick={logout}
+                  type="button"
+                  className="flex items-center gap-space-2xs h-8 px-space-sm rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  <span className="hidden sm:inline">{usuario.nombre}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setView('login')}
+                  type="button"
+                  className="flex items-center gap-space-2xs h-8 px-space-sm rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-[0_0_12px_rgba(255,193,116,0.3)]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">login</span>
+                  <span className="hidden sm:inline">Iniciar sesión</span>
+                </button>
+              )}
               <div onClick={() => setView('admin')} className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(255,193,116,0.3)] cursor-pointer">
                 <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
               </div>
@@ -111,30 +157,42 @@ const CineApp = () => {
       <main className={`w-full ${view === 'admin' ? '' : 'pt-20'} flex-grow flex flex-col bg-surface-container-lowest relative z-10`}>
         {view === 'admin' ? (
           <AdminAccess onBack={() => setView('home')} onSuccess={() => setView('admin_console')} />
+        ) : view === 'login' ? (
+          <Login
+            onBack={goHome}
+            onLoggedIn={() => {
+              const accion = afterLoginAction;
+              setAfterLoginAction(null);
+              if (accion) {
+                accion();
+              } else {
+                setView('home');
+              }
+            }}
+          />
         ) : view === 'home' ? (
           <>
-            <TopModeSwitcher 
-              mode={interactionMode} 
-              onChangeMode={(m) => {
-                setInteractionMode(m);
-                if (m === 'voz') setView('voice');
-              }} 
+            <TopModeSwitcher
+              mode={interactionMode}
+              onChangeMode={cambiarModoInteraccion}
             />
-            <Home onNavigate={navigateToCartelera} onVoiceMode={() => setView('voice')} />
+            <Home onNavigate={navigateToCartelera} onVoiceMode={irAModoVoz} />
           </>
         ) : (
           <div className="w-full h-full flex-grow flex flex-col relative">
-             <TopModeSwitcher 
-              mode={interactionMode} 
-              onChangeMode={(m) => {
-                setInteractionMode(m);
-                if (m === 'voz') setView('voice');
-              }} 
+             <TopModeSwitcher
+              mode={interactionMode}
+              onChangeMode={cambiarModoInteraccion}
             />
              {!state.peliculaSeleccionada ? (
                <div className="max-w-[1720px] mx-auto w-full px-space-xl lg:px-space-2xl py-space-xl flex-grow flex flex-col">
                  <Cartelera />
                </div>
+             ) : !usuario ? (
+               <Login
+                 onBack={() => dispatch({ type: 'RESETEAR_COMPRA' })}
+                 onLoggedIn={() => {}}
+               />
              ) : (
                <ProcesoCompra onVoiceCommand={() => {
                  setInteractionMode('voz');
@@ -167,7 +225,7 @@ const CineApp = () => {
       )}
 
       {(view === 'home' || view === 'app') && (
-        <BottomHUD onVoiceMode={() => setView('voice')} />
+        <BottomHUD onVoiceMode={irAModoVoz} />
       )}
     </div>
   );
