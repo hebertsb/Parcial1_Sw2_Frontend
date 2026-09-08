@@ -6,3 +6,13 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Credenciales descargadas de Google Cloud — nunca se suben.
+client_secret_*.json
+google-services.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+key.properties
+*.p12
+*.pem
