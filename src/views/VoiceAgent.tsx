@@ -1,13 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useCine } from '../../controllers/CineContext';
+import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
+import { sendVoiceMessage } from '../api/voice.api';
+
+type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
-  const [orbState, setOrbState] = useState<'speaking' | 'listening'>('listening');
+  const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isMuted, setIsMuted] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const [replyText, setReplyText] = useState('');
+  const [error, setError] = useState<string | null>(null);
   let holdTimer: any = null;
 
-  const startHold = (e: React.MouseEvent | React.TouchEvent) => {
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  const startHold = (e: MouseEvent | TouchEvent) => {
     e.preventDefault();
     setHoldProgress(0);
     holdTimer = setInterval(() => {
@@ -41,18 +50,124 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
     };
   }, [holdProgress]);
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  const startRecording = async () => {
+    console.log('[voz] 1. pidiendo permiso de microfono...');
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[voz] 2. permiso concedido, stream:', stream, 'tracks:', stream.getAudioTracks());
+
+      const recorder = new MediaRecorder(stream);
+      console.log('[voz] 3. MediaRecorder creado, mimeType:', recorder.mimeType, 'state:', recorder.state);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        console.log('[voz] 4. dataavailable, tamaño:', e.data.size);
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onerror = (e) => {
+        console.error('[voz] ERROR en MediaRecorder:', e);
+      };
+      recorder.onstop = () => {
+        console.log('[voz] 5. recorder.onstop, chunks:', audioChunksRef.current.length);
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
+        console.log('[voz] 6. blob final, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
+        void sendToAgent(audioBlob);
+      };
+
+      recorder.start();
+      console.log('[voz] 3b. recorder.start() llamado, state:', recorder.state);
+      mediaRecorderRef.current = recorder;
+      setOrbState('listening');
+    } catch (err) {
+      console.error('[voz] ERROR al pedir microfono:', err);
+      setError('No se pudo acceder al micrófono. Revisa los permisos del navegador.');
+    }
   };
 
-  const toggleOrb = () => {
-    setOrbState(prev => prev === 'listening' ? 'speaking' : 'listening');
+  const stopRecording = () => {
+    console.log('[voz] stopRecording() llamado, recorder actual:', mediaRecorderRef.current, 'state:', mediaRecorderRef.current?.state);
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+  };
+
+  const sendToAgent = async (audioBlob: Blob) => {
+    console.log('[voz] 7. enviando al backend, tamaño del blob:', audioBlob.size);
+    setOrbState('thinking');
+    try {
+      const result = await sendVoiceMessage(audioBlob);
+      console.log('[voz] 8. respuesta del backend:', result);
+      setTranscript(result.transcript);
+      setReplyText(result.replyText);
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.src = result.audioUrl;
+        await audioPlayerRef.current.play();
+        console.log('[voz] 9. reproduciendo audio de respuesta');
+      }
+    } catch (err) {
+      console.error('[voz] ERROR al hablar con el agente:', err);
+      setError(err instanceof Error ? err.message : 'No se pudo hablar con el agente.');
+      setOrbState('idle');
+    }
+  };
+
+  const handleOrbClick = () => {
+    console.log('[voz] click en el orbe, orbState actual:', orbState, 'isMuted:', isMuted);
+    if (isMuted) return;
+    if (orbState === 'idle') {
+      void startRecording();
+    } else if (orbState === 'listening') {
+      stopRecording();
+    }
+  };
+
+  const toggleMute = () => {
+    if (!isMuted && orbState === 'listening') {
+      stopRecording();
+    }
+    setIsMuted(!isMuted);
   };
 
   const offset = 320 - (320 * (holdProgress / 100));
 
+  const statusText = isMuted
+    ? 'MICRÓFONO PAUSADO'
+    : orbState === 'listening'
+      ? 'ESCUCHANDO TU RESPUESTA...'
+      : orbState === 'thinking'
+        ? 'PROCESANDO TU MENSAJE...'
+        : orbState === 'speaking'
+          ? 'LUMEN AI RESPONDIENDO...'
+          : 'PRESIONA EL ORBE PARA HABLAR';
+
+  const statusColorClass = isMuted
+    ? 'text-error'
+    : orbState === 'listening'
+      ? 'text-secondary'
+      : orbState === 'speaking'
+        ? 'text-primary'
+        : 'text-on-surface-variant';
+
+  const statusDotClass = isMuted
+    ? 'bg-error shadow-[0_0_12px_rgba(255,180,171,0.9)]'
+    : orbState === 'listening'
+      ? 'bg-secondary shadow-[0_0_12px_rgba(76,215,246,0.9)]'
+      : orbState === 'speaking'
+        ? 'bg-primary-container shadow-[0_0_12px_rgba(245,158,11,0.9)]'
+        : 'bg-outline';
+
+  const isActive = orbState === 'listening' || orbState === 'speaking';
+
   return (
     <div className="flex flex-col w-full absolute inset-0 z-[100] bg-surface-container-lowest text-on-surface overflow-hidden select-none min-h-screen">
+      <audio
+        ref={audioPlayerRef}
+        hidden
+        onPlay={() => setOrbState('speaking')}
+        onEnded={() => setOrbState('idle')}
+      />
+
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[85vw] max-w-[1100px] h-[580px] bg-gradient-to-b from-primary/15 via-secondary/5 to-transparent blur-[110px] rounded-full opacity-70"></div>
         <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary-container/10 blur-[130px] rounded-full"></div>
@@ -78,10 +193,6 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
             </span>
             <span className="font-label-code text-label-code text-on-surface uppercase tracking-widest">Canal de Voz Bidireccional</span>
           </div>
-          <div className="hidden sm:flex items-center gap-space-2xs px-space-sm py-space-xs rounded-full bg-surface-container-low/60 font-label-code text-label-code text-on-surface-variant tracking-wider">
-            <span>LATENCIA:</span>
-            <span className="text-tertiary font-bold">18ms</span>
-          </div>
         </div>
 
         <div className="flex items-center gap-space-sm">
@@ -106,27 +217,33 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-space-md py-space-xs">
         <div className="mb-space-md flex flex-col items-center gap-space-xs">
           <div className="flex items-center gap-space-sm px-space-lg py-space-xs rounded-full bg-surface-container/90 backdrop-blur-xl shadow-[0_0_30px_rgba(245,158,11,0.25)] transition-all duration-300">
-            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${isMuted ? 'bg-error shadow-[0_0_12px_rgba(255,180,171,0.9)]' : orbState === 'listening' ? 'bg-secondary shadow-[0_0_12px_rgba(76,215,246,0.9)]' : 'bg-primary-container shadow-[0_0_12px_rgba(245,158,11,0.9)]'}`}></span>
-            <span className={`font-label-code text-label-code font-bold tracking-[0.2em] uppercase ${isMuted ? 'text-error' : orbState === 'listening' ? 'text-secondary' : 'text-primary'}`}>
-              {isMuted ? 'MICRÓFONO PAUSADO' : orbState === 'listening' ? 'ESCUCHANDO TU RESPUESTA...' : 'LUMEN AI RESPONDIENDO...'}
+            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${statusDotClass}`}></span>
+            <span className={`font-label-code text-label-code font-bold tracking-[0.2em] uppercase ${statusColorClass}`}>
+              {statusText}
             </span>
           </div>
 
+          {error && (
+            <div className="px-space-md py-space-xs rounded-full bg-error-container/30 text-error font-label-code text-label-code">
+              {error}
+            </div>
+          )}
+
           <div className="flex items-center justify-center gap-1.5 h-6 px-space-md">
-            <span className={`w-1 bg-secondary/80 rounded-full h-3 ${!isMuted && 'animate-[pulse_0.7s_ease-in-out_infinite]'}`}></span>
-            <span className={`w-1 bg-primary/90 rounded-full h-5 ${!isMuted && 'animate-[pulse_0.5s_ease-in-out_infinite_0.1s]'}`}></span>
-            <span className={`w-1 bg-primary-container rounded-full h-4 ${!isMuted && 'animate-[pulse_0.8s_ease-in-out_infinite_0.2s]'}`}></span>
-            <span className={`w-1 bg-tertiary rounded-full h-6 ${!isMuted && 'animate-[pulse_0.6s_ease-in-out_infinite_0.15s]'}`}></span>
-            <span className={`w-1 bg-secondary rounded-full h-3 ${!isMuted && 'animate-[pulse_0.7s_ease-in-out_infinite_0.3s]'}`}></span>
-            <span className={`w-1 bg-primary rounded-full h-5 ${!isMuted && 'animate-[pulse_0.5s_ease-in-out_infinite_0.05s]'}`}></span>
-            <span className={`w-1 bg-tertiary rounded-full h-2 ${!isMuted && 'animate-[pulse_0.9s_ease-in-out_infinite_0.25s]'}`}></span>
+            <span className={`w-1 bg-secondary/80 rounded-full h-3 ${isActive && 'animate-[pulse_0.7s_ease-in-out_infinite]'}`}></span>
+            <span className={`w-1 bg-primary/90 rounded-full h-5 ${isActive && 'animate-[pulse_0.5s_ease-in-out_infinite_0.1s]'}`}></span>
+            <span className={`w-1 bg-primary-container rounded-full h-4 ${isActive && 'animate-[pulse_0.8s_ease-in-out_infinite_0.2s]'}`}></span>
+            <span className={`w-1 bg-tertiary rounded-full h-6 ${isActive && 'animate-[pulse_0.6s_ease-in-out_infinite_0.15s]'}`}></span>
+            <span className={`w-1 bg-secondary rounded-full h-3 ${isActive && 'animate-[pulse_0.7s_ease-in-out_infinite_0.3s]'}`}></span>
+            <span className={`w-1 bg-primary rounded-full h-5 ${isActive && 'animate-[pulse_0.5s_ease-in-out_infinite_0.05s]'}`}></span>
+            <span className={`w-1 bg-tertiary rounded-full h-2 ${isActive && 'animate-[pulse_0.9s_ease-in-out_infinite_0.25s]'}`}></span>
           </div>
         </div>
 
         <div className="relative flex items-center justify-center w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] my-space-xs">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 via-secondary/15 to-transparent blur-2xl animate-[spin_16s_linear_infinite] scale-125 ${isMuted && 'opacity-30'}`}></div>
           <div className={`absolute inset-4 rounded-full bg-gradient-to-bl from-primary-container/20 via-surface-container-lowest to-secondary-container/20 blur-xl animate-[pulse_3s_ease-in-out_infinite] ${isMuted && 'opacity-30'}`}></div>
-          
+
           <svg className="absolute inset-0 w-full h-full pointer-events-none" fill="none" viewBox="0 0 400 400">
             <defs>
               <linearGradient id="orbGradient1" x1="0%" x2="100%" y1="0%" y2="100%">
@@ -148,10 +265,12 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
             )}
           </svg>
 
-          <div onClick={toggleOrb} className={`relative w-48 h-48 sm:w-60 sm:h-60 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(245,158,11,0.45),inset_0_0_50px_rgba(3,181,211,0.5)] transition-transform duration-500 hover:scale-105 cursor-pointer bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30 backdrop-blur-2xl ${isMuted ? 'grayscale' : ''}`}>
+          <div onClick={handleOrbClick} className={`relative w-48 h-48 sm:w-60 sm:h-60 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(245,158,11,0.45),inset_0_0_50px_rgba(3,181,211,0.5)] transition-transform duration-500 hover:scale-105 cursor-pointer bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30 backdrop-blur-2xl ${isMuted ? 'grayscale' : ''}`}>
             <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-primary via-primary-container to-secondary-container opacity-90 blur-[1px] ${!isMuted && 'animate-[pulse_2.2s_ease-in-out_infinite]'} flex items-center justify-center`}>
               <div className="w-20 h-20 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center shadow-inner">
-                <span className={`material-symbols-outlined text-[36px] drop-shadow-[0_0_12px_rgba(255,193,116,0.8)] ${isMuted ? 'text-on-surface-variant' : 'text-primary animate-pulse'}`}>{isMuted ? 'mic_off' : 'graphic_eq'}</span>
+                <span className={`material-symbols-outlined text-[36px] drop-shadow-[0_0_12px_rgba(255,193,116,0.8)] ${isMuted ? 'text-on-surface-variant' : 'text-primary animate-pulse'}`}>
+                  {isMuted ? 'mic_off' : orbState === 'listening' ? 'stop_circle' : 'graphic_eq'}
+                </span>
               </div>
             </div>
           </div>
@@ -164,9 +283,8 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
                 <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(76,215,246,0.8)]"></span>
                 <span className="font-label-code text-label-code uppercase tracking-wider text-secondary">Transcripción en Tiempo Real</span>
               </div>
-              <span className="font-label-code text-label-code text-on-surface-variant font-mono">DOLBY VOICE DSP • ISO 8402</span>
             </div>
-            
+
             <div className="flex flex-col gap-space-sm">
               <div className="flex items-start gap-space-sm group">
                 <div className="w-7 h-7 rounded-lg bg-surface-bright flex-shrink-0 flex items-center justify-center text-on-surface mt-0.5">
@@ -175,13 +293,13 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
                 <div className="flex flex-col">
                   <span className="font-label-code text-label-code text-outline uppercase tracking-wider">Tú (Cliente)</span>
                   <p className="font-headline-sm text-headline-sm text-on-surface leading-snug tracking-tight">
-                    “Confirmo la compra de los dos boletos para Duna a las 20:15 con tarjeta de débito.”
+                    {transcript || 'Presiona el orbe naranja y habla para comenzar.'}
                   </p>
                 </div>
               </div>
-              
+
               <div className="w-full h-px bg-gradient-to-r from-transparent via-outline-variant/40 to-transparent my-space-2xs"></div>
-              
+
               <div className="flex items-start gap-space-sm">
                 <div className="w-7 h-7 rounded-lg bg-primary-container/20 flex-shrink-0 flex items-center justify-center text-primary mt-0.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
                   <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
@@ -189,10 +307,12 @@ export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center gap-space-xs">
                     <span className="font-label-code text-label-code text-primary uppercase tracking-wider font-bold">Lumen AI</span>
-                    <span className="font-label-code text-label-code text-tertiary px-space-2xs py-0.5 rounded bg-tertiary/10">PROCESADO CON ÉXITO</span>
+                    {replyText && (
+                      <span className="font-label-code text-label-code text-tertiary px-space-2xs py-0.5 rounded bg-tertiary/10">PROCESADO CON ÉXITO</span>
+                    )}
                   </div>
                   <p className="font-body-lg text-body-lg text-primary-fixed leading-relaxed mt-0.5">
-                    Perfecto. Procesando pago de 160 Bs. Imprimiendo tu ticket digital ahora mismo...
+                    {replyText || 'Esperando tu mensaje...'}
                   </p>
                 </div>
               </div>

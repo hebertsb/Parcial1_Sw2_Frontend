@@ -16,7 +16,10 @@ export default defineConfig(() => {
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // usePolling: corriendo dentro de Docker (bind mount Windows -> Linux), los eventos
+      // nativos de inotify no cruzan esa frontera, asi que Vite nunca detecta los cambios
+      // de archivo sin polling activo.
+      watch: process.env.DISABLE_HMR === 'true' ? null : { usePolling: true, interval: 300 },
     },
   };
 });
