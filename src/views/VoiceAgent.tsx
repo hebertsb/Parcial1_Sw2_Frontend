@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { sendVoiceMessage } from '../api/voice.api';
+import { useCine } from '../controllers/CineContext';
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
-export const VoiceAgent = ({ onClose }: { onClose: () => void }) => {
+export const VoiceAgent = () => {
+  const navigate = useNavigate();
+  const { state: cineState } = useCine();
+  const onClose = () => navigate(cineState.peliculaSeleccionada ? '/compra' : '/cartelera');
+
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isMuted, setIsMuted] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);

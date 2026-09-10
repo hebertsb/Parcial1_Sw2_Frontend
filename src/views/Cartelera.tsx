@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCine } from '../controllers/CineContext';
 import { PeliculaCard } from '../components/widgets/PeliculaCard';
 import { Pelicula } from '../core/types/pelicula.types';
@@ -48,6 +49,7 @@ const MOCK_PELICULAS: Pelicula[] = [
 
 export const Cartelera = () => {
   const { state, dispatch } = useCine();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (state.peliculas.length === 0) {
@@ -67,9 +69,11 @@ export const Cartelera = () => {
       horarios: ['17:30', '20:15', '22:45']
     };
     dispatch({ type: 'SELECCIONAR_PELICULA', payload: { pelicula: movie, horario: '20:15' } });
+    navigate('/compra');
   };
 
   return (
+    <div className="max-w-[1720px] mx-auto w-full px-space-xl lg:px-space-2xl py-space-xl flex-grow flex flex-col">
     <div className="flex-grow flex flex-col pb-32">
       {/* TOP AMBIENT PROJECTION LAYER */}
       <div className="relative w-full overflow-hidden">
@@ -241,6 +245,7 @@ export const Cartelera = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };
