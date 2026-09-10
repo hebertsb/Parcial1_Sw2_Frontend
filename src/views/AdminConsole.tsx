@@ -1,7 +1,14 @@
 import { useState } from 'react';
+import { useAuth } from '../controllers/AuthContext';
 
 export const AdminConsole = ({ onBack }: { onBack: () => void }) => {
+  const { usuario, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'cartelera' | 'telemetria' | 'logs' | 'promos' | 'salas'>('cartelera');
+
+  const cerrarSesion = () => {
+    logout();
+    onBack();
+  };
 
   return (
     <div className="bg-background font-body-md text-body-md text-on-background min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
@@ -80,13 +87,15 @@ export const AdminConsole = ({ onBack }: { onBack: () => void }) => {
               </div>
               <div className="flex items-center gap-space-sm pl-space-sm">
                 <div className="flex flex-col text-right hidden sm:flex">
-                  <span className="font-label-lg text-label-lg text-on-surface font-bold">Admin General</span>
-                  <span className="font-label-code text-label-code text-outline">ID: ADM-9042</span>
+                  <span className="font-label-lg text-label-lg text-on-surface font-bold">{usuario?.nombre ?? 'Admin'}</span>
+                  <span className="font-label-code text-label-code text-outline uppercase">
+                    {usuario?.rol === 'administrador' ? 'Administrador' : usuario?.rol ?? '—'}
+                  </span>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                   <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
                 </div>
-                <button onClick={onBack} className="w-9 h-9 rounded-lg flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors" title="Cerrar Sesión">
+                <button onClick={cerrarSesion} className="w-9 h-9 rounded-lg flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors" title="Cerrar Sesión">
                   <span className="material-symbols-outlined text-[20px]">logout</span>
                 </button>
               </div>

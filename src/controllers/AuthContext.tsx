@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { authReducer, initialAuthState, AuthState } from './auth.reducer';
-import { loginConGoogle } from '../api/auth.api';
-import { Usuario } from '../core/types/usuario.types';
+import { loginConGoogle as apiLoginConGoogle, loginSimplificado as apiLoginSimplificado } from '../api/auth.api';
+import { Rol, Usuario } from '../core/types/usuario.types';
 
 const TOKEN_STORAGE_KEY = 'lumen_token';
 
@@ -35,7 +35,8 @@ function hydrateInitialState(initial: AuthState): AuthState {
 }
 
 interface AuthContextProps extends AuthState {
-  login: (idToken: string) => Promise<void>;
+  loginConGoogle: (idToken: string) => Promise<void>;
+  loginSimplificado: (nombre: string, rol: Rol) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,8 +45,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(authReducer, initialAuthState, hydrateInitialState);
 
-  const login = async (idToken: string) => {
-    const { access_token } = await loginConGoogle(idToken);
+  const aplicarToken = (access_token: string) => {
     const usuario = decodeJwtPayload(access_token);
     if (!usuario) {
       throw new Error('El backend devolvió un token inválido.');
@@ -54,13 +54,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'LOGIN', payload: { usuario, token: access_token } });
   };
 
+  const loginConGoogle = async (idToken: string) => {
+    const { access_token } = await apiLoginConGoogle(idToken);
+    aplicarToken(access_token);
+  };
+
+  /** Login simplificado (nombre+rol, sin contraseña) — hoy solo lo usa el panel de administrador. */
+  const loginSimplificado = async (nombre: string, rol: Rol) => {
+    const { access_token } = await apiLoginSimplificado(nombre, rol);
+    aplicarToken(access_token);
+  };
+
   const logout = () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     dispatch({ type: 'LOGOUT' });
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...state, loginConGoogle, loginSimplificado, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 

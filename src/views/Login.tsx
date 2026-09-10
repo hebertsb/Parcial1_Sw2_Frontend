@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 export const Login = ({ onLoggedIn, onBack }: LoginProps) => {
-  const { login } = useAuth();
+  const { loginConGoogle } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -20,7 +20,7 @@ export const Login = ({ onLoggedIn, onBack }: LoginProps) => {
     setError(null);
     setCargando(true);
     try {
-      await login(credentialResponse.credential);
+      await loginConGoogle(credentialResponse.credential);
       onLoggedIn();
     } catch {
       setError('No se pudo iniciar sesión. Intenta de nuevo.');

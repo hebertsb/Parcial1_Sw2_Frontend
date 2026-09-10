@@ -1,28 +1,30 @@
 import { useState } from 'react';
+import { useAuth } from '../controllers/AuthContext';
 
 export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSuccess: () => void }) => {
+  const { loginSimplificado } = useAuth();
   const [activeRole, setActiveRole] = useState<'ADMIN' | 'MANAGER' | 'TECH'>('ADMIN');
-  const [method, setMethod] = useState<'pin' | 'nfc' | 'voice'>('pin');
-  const [pin, setPin] = useState('');
+  const [method, setMethod] = useState<'pin' | 'voice'>('pin');
+  const [codigo, setCodigo] = useState('');
   const [status, setStatus] = useState<'idle' | 'validating' | 'success'>('idle');
+  const [error, setError] = useState<string | null>(null);
 
-  const handlePin = (num: string) => {
-    if (pin.length < 6) {
-      setPin(prev => prev + num);
-    }
-  };
-
-  const clearPin = () => {
-    setPin(prev => prev.slice(0, -1));
-  };
-
-  const submitPin = () => {
-    if (pin.length === 6) {
-      setStatus('validating');
-      setTimeout(() => {
-        setStatus('success');
-        setTimeout(() => onSuccess(), 1500);
-      }, 700);
+  // Login simplificado (nombre+rol, sin contraseña — ver docs/db-schema-notes.md
+  // del backend) — el "código de acceso" es literalmente el `nombre` del
+  // usuario administrador sembrado en la base. Solo `rol='administrador'`
+  // existe de verdad en el backend; MANAGER/TECH quedan como selección
+  // decorativa hasta que existan esos roles.
+  const submitCodigo = async () => {
+    if (!codigo.trim() || status === 'validating') return;
+    setError(null);
+    setStatus('validating');
+    try {
+      await loginSimplificado(codigo.trim(), 'administrador');
+      setStatus('success');
+      setTimeout(() => onSuccess(), 1200);
+    } catch {
+      setError('Código de acceso incorrecto.');
+      setStatus('idle');
     }
   };
 
@@ -41,10 +43,8 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
             <span className="material-symbols-outlined text-headline-sm" style={{ fontVariationSettings: "'FILL' 1" }}>security</span>
           </div>
           <div>
-            <span className="font-label-code text-label-code tracking-widest text-primary uppercase">SISTEMA CERRADO DE CONTROL OPERATIVO • RF11 ROLE ACCESS</span>
+            <span className="font-label-code text-label-code tracking-widest text-primary uppercase">Sistema Cerrado de Control Operativo</span>
             <div className="font-body-sm text-body-sm text-outline flex items-center gap-2">
-              <span>Terminal Kiosk-04</span>
-              <span>•</span>
               <span className="text-tertiary font-medium flex items-center gap-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-tertiary"></span> Nodo Seguro Conectado
               </span>
@@ -82,7 +82,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
                     <span className="material-symbols-outlined text-headline-sm text-primary">admin_panel_settings</span>
                     <div>
                       <div className="font-label-lg text-label-lg">Administrador General</div>
-                      <div className="font-body-sm text-body-sm text-outline">Acceso completo • RF06 / RF08</div>
+                      <div className="font-body-sm text-body-sm text-outline">Acceso completo a cartelera y reportes</div>
                     </div>
                   </div>
                   <span className={`material-symbols-outlined text-headline-sm ${activeRole === 'ADMIN' ? 'text-primary' : 'text-outline opacity-0 group-hover:opacity-100'}`}>
@@ -97,7 +97,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
                     <span className="material-symbols-outlined text-headline-sm text-secondary">manage_accounts</span>
                     <div>
                       <div className="font-label-lg text-label-lg">Gerente de Turno</div>
-                      <div className="font-body-sm text-body-sm text-outline">Taquilla y Salas • RF07</div>
+                      <div className="font-body-sm text-body-sm text-outline">Taquilla y Salas</div>
                     </div>
                   </div>
                   <span className={`material-symbols-outlined text-headline-sm ${activeRole === 'MANAGER' ? 'text-primary' : 'text-outline opacity-0 group-hover:opacity-100'}`}>
@@ -124,7 +124,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
 
             <div className="p-4 rounded-lg bg-surface-container flex flex-col gap-2 mt-2">
               <div className="flex items-center justify-between">
-                <span className="font-label-code text-label-code uppercase text-outline">Auditoría Criptográfica RF12</span>
+                <span className="font-label-code text-label-code uppercase text-outline">Auditoría de Accesos</span>
                 <span className="font-label-code text-label-code text-tertiary flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-ping"></span> ACTIVO
                 </span>
@@ -159,26 +159,19 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
           <div className="bg-surface-container-low p-6 rounded-xl shadow-lg flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between border-b pb-4 gap-4" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => setMethod('pin')}
                   className={`px-4 py-2.5 rounded-lg font-label-lg text-label-lg flex items-center gap-2 transition-all ${method === 'pin' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
                 >
                   <span className="material-symbols-outlined text-label-lg">pin</span>
-                  Teclado PIN Kiosco
+                  Acceso Administrativo
                 </button>
-                <button 
-                  onClick={() => setMethod('nfc')}
-                  className={`px-4 py-2.5 rounded-lg font-label-lg text-label-lg flex items-center gap-2 transition-all ${method === 'nfc' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
-                >
-                  <span className="material-symbols-outlined text-label-lg">nfc</span>
-                  Credencial RFID / NFC
-                </button>
-                <button 
+                <button
                   onClick={() => setMethod('voice')}
                   className={`px-4 py-2.5 rounded-lg font-label-lg text-label-lg flex items-center gap-2 transition-all ${method === 'voice' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
                 >
                   <span className="material-symbols-outlined text-label-lg">mic</span>
-                  Voz Staff (RF11/RF14)
+                  Voz Staff
                 </button>
               </div>
               <span className="font-label-code text-label-code text-outline tracking-wider uppercase">MODO ALTA FIDELIDAD</span>
@@ -187,57 +180,31 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
             {method === 'pin' && (
               <div className="flex flex-col items-center justify-center py-4 w-full">
                 <div className="w-full max-w-sm flex flex-col items-center">
-                  <div className="font-label-md text-label-md text-outline uppercase tracking-wider mb-3">Ingrese PIN de Autorización (6 Dígitos)</div>
-                  
-                  <div className="flex items-center justify-center gap-3 mb-6 bg-surface-container px-6 py-4 rounded-xl shadow-inner w-full">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className={`w-4 h-4 rounded-full transition-all duration-150 ${i < pin.length ? 'bg-primary scale-110 shadow-sm' : 'bg-surface-variant'}`}></div>
-                    ))}
-                  </div>
+                  <div className="font-label-md text-label-md text-outline uppercase tracking-wider mb-3">Ingrese Código de Acceso de Personal</div>
 
-                  <div className="grid grid-cols-3 gap-3 w-full">
-                    {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-                      <button key={num} onClick={() => handlePin(num)} className="h-16 rounded-xl bg-surface-container hover:bg-surface-container-high active:scale-95 text-headline-md font-headline-md text-on-surface transition-all flex items-center justify-center shadow-sm">
-                        {num}
-                      </button>
-                    ))}
-                    <button onClick={clearPin} className="h-16 rounded-xl bg-surface-container-high text-error hover:bg-surface-bright active:scale-95 transition-all flex items-center justify-center font-label-lg text-label-lg">
-                      <span className="material-symbols-outlined text-headline-md">backspace</span>
-                    </button>
-                    <button onClick={() => handlePin('0')} className="h-16 rounded-xl bg-surface-container hover:bg-surface-container-high active:scale-95 text-headline-md font-headline-md text-on-surface transition-all flex items-center justify-center shadow-sm">
-                      0
-                    </button>
-                    <button onClick={submitPin} className="h-16 rounded-xl bg-primary-container text-on-primary-container hover:bg-primary active:scale-95 transition-all flex items-center justify-center font-label-lg text-label-lg">
-                      <span className="material-symbols-outlined text-headline-md">login</span>
-                    </button>
-                  </div>
+                  <input
+                    type="password"
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void submitCodigo(); }}
+                    disabled={status === 'validating'}
+                    autoFocus
+                    className="w-full h-16 px-5 mb-6 rounded-xl bg-surface-container text-on-surface font-headline-sm text-headline-sm text-center shadow-inner outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
 
-                  <div className={`mt-4 font-body-sm text-body-sm text-center h-6 ${status === 'validating' ? 'text-secondary animate-pulse' : status === 'success' ? 'text-tertiary' : 'text-outline'}`}>
-                    {status === 'validating' ? 'Validando credenciales criptográficas...' : status === 'success' ? 'PIN Aceptado' : 'Toque los números para ingresar su código de personal'}
+                  <button
+                    onClick={() => void submitCodigo()}
+                    disabled={!codigo.trim() || status === 'validating'}
+                    className="w-full h-16 rounded-xl bg-primary-container text-on-primary-container hover:bg-primary active:scale-95 transition-all flex items-center justify-center gap-2 font-label-lg text-label-lg disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-headline-md">login</span>
+                    Ingresar
+                  </button>
+
+                  <div className={`mt-4 font-body-sm text-body-sm text-center h-6 ${status === 'validating' ? 'text-secondary animate-pulse' : status === 'success' ? 'text-tertiary' : error ? 'text-error' : 'text-outline'}`}>
+                    {status === 'validating' ? 'Validando credenciales...' : status === 'success' ? 'Código Aceptado' : error ? error : 'Ingrese su código de acceso de personal'}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {method === 'nfc' && (
-              <div className="flex flex-col items-center justify-center py-10 w-full text-center">
-                <div className="relative flex items-center justify-center w-36 h-36 rounded-full bg-secondary/10 mb-6 group cursor-pointer" onClick={triggerSuccess}>
-                  <div className="absolute inset-0 rounded-full border-2 border-secondary animate-ping opacity-25"></div>
-                  <div className="w-28 h-28 rounded-full bg-surface-container flex items-center justify-center shadow-xl">
-                    <span className="material-symbols-outlined text-display-hero text-secondary">contactless</span>
-                  </div>
-                </div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Lector NFC Activo</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant max-w-md mt-2">
-                  Acerque su credencial física RFID, pulsera autorizada o teléfono con pass digital al sensor lateral del tótem.
-                </p>
-                <div className="mt-6 flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary font-label-md text-label-md">
-                  <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                  Sensor 13.56 MHz ISO/IEC 14443 listo para lectura
-                </div>
-                <button onClick={triggerSuccess} className="mt-6 px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-all">
-                  Simular Lectura de Llave RFID
-                </button>
               </div>
             )}
 
@@ -249,7 +216,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
                     <span className="material-symbols-outlined text-display-hero">mic</span>
                   </div>
                 </div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Validación de Voz Staff (RF11 / RF14)</h2>
+                <h2 className="font-headline-md text-headline-md text-on-surface">Validación de Voz Staff</h2>
                 <p className="font-body-md text-body-md text-on-surface-variant max-w-md mt-2">
                   El motor de reconocimiento procesa comandos verbales con firma biométrica del operador registrado.
                 </p>
@@ -274,7 +241,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
               </div>
               <div>
                 <div className="font-label-lg text-label-lg text-on-surface">Gestión Cartelera</div>
-                <div className="font-body-sm text-body-sm text-outline">RF06 Alta / Baja Películas</div>
+                <div className="font-body-sm text-body-sm text-outline">Alta / Baja de Películas</div>
               </div>
             </div>
             <div className="bg-surface-container-low p-4 rounded-xl flex items-center gap-3">
@@ -283,7 +250,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
               </div>
               <div>
                 <div className="font-label-lg text-label-lg text-on-surface">Programación Salas</div>
-                <div className="font-body-sm text-body-sm text-outline">RF07 Horarios & Formatos</div>
+                <div className="font-body-sm text-body-sm text-outline">Horarios & Formatos</div>
               </div>
             </div>
             <div className="bg-surface-container-low p-4 rounded-xl flex items-center gap-3">
@@ -292,7 +259,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
               </div>
               <div>
                 <div className="font-label-lg text-label-lg text-on-surface">Reportes en Vivo</div>
-                <div className="font-body-sm text-body-sm text-outline">RF08 Recaudación y Butacas</div>
+                <div className="font-body-sm text-body-sm text-outline">Recaudación y Butacas</div>
               </div>
             </div>
           </div>
@@ -300,7 +267,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
       </div>
 
       {status === 'success' && (
-        <div className="absolute inset-0 bg-surface-dim/80 backdrop-blur-md flex items-center justify-center p-4 z-50 rounded-xl" onClick={() => {setStatus('idle'); setPin('');}}>
+        <div className="absolute inset-0 bg-surface-dim/80 backdrop-blur-md flex items-center justify-center p-4 z-50 rounded-xl" onClick={() => {setStatus('idle'); setCodigo('');}}>
           <div className="bg-surface-container max-w-md w-full p-6 rounded-2xl shadow-2xl flex flex-col items-center text-center gap-4">
             <div className="w-16 h-16 rounded-full bg-tertiary/20 text-tertiary flex items-center justify-center">
               <span className="material-symbols-outlined text-display-hero">verified_user</span>
@@ -314,7 +281,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
             <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden mt-2">
               <div className="bg-tertiary h-full rounded-full w-full animate-pulse"></div>
             </div>
-            <span className="font-label-code text-label-code text-outline uppercase tracking-wider">Cargando Módulos RF06 / RF07 / RF08</span>
+            <span className="font-label-code text-label-code text-outline uppercase tracking-wider">Cargando Módulos de Administración</span>
           </div>
         </div>
       )}

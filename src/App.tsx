@@ -131,10 +131,15 @@ const CineApp = () => {
                 <button
                   onClick={logout}
                   type="button"
-                  className="flex items-center gap-space-2xs h-8 px-space-sm rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-colors"
+                  className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors"
                 >
                   <span className="material-symbols-outlined text-[16px]">logout</span>
-                  <span className="hidden sm:inline">{usuario.nombre}</span>
+                  <span className="hidden sm:flex flex-col items-start leading-tight">
+                    <span className="font-label-md text-label-md font-bold">{usuario.nombre}</span>
+                    <span className="font-label-code text-label-code text-on-surface-variant uppercase">
+                      {usuario.rol === 'administrador' ? 'Administrador' : 'Cliente'}
+                    </span>
+                  </span>
                 </button>
               ) : (
                 <button
