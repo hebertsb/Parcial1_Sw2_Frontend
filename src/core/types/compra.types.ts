@@ -1,8 +1,12 @@
 export interface Butaca {
+  /** Clave local para React/comparación en TOGGLE_BUTACA (ej. "A1" = fila+numero). */
   id: string;
+  /** `idAsiento` real del backend — lo que efectivamente viaja en `POST /ventas`. */
+  idAsiento: number;
   fila: string;
   columna: number;
   estado: 'disponible' | 'ocupada' | 'seleccionada';
+  /** Precio real de la función (`GET /precios/:id`, ver SeleccionButacas.tsx) — 0 solo si la función no tiene precio asignado, ahí el total recién se sabe al confirmar (`POST /ventas`). */
   precio: number;
 }
 

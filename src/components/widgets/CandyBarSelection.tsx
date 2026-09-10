@@ -8,10 +8,17 @@ export const CandyBarSelection = () => {
     const existing = state.candyBarSeleccionado.find(c => c.id === id);
     const count = existing ? existing.cantidad : 0;
     const nextCount = Math.max(0, count + delta);
-    
+
     dispatch({
       type: 'ACTUALIZAR_CANDYBAR',
-      payload: { id, nombre: name, precio: price, cantidad: nextCount }
+      payload: {
+        id,
+        nombre: name,
+        precio: price,
+        cantidad: nextCount,
+        descripcion: existing?.descripcion ?? '',
+        imagenUrl: existing?.imagenUrl ?? '',
+      }
     });
   };
 

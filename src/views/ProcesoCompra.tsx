@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { SeleccionButacas } from '../components/widgets/SeleccionButacas';
 import { CandyBarSelection } from '../components/widgets/CandyBarSelection';
+import { obtenerDisponibilidad } from '../api/funciones.api';
+import { obtenerPrecio } from '../api/precios.api';
+import { obtenerSala } from '../api/salas.api';
+import { posterFor } from '../core/posters';
 
 const MOCK_CANDYBAR = [
   { id: 'c1', nombre: 'Combo Pareja Épico', descripcion: 'Mitad Salada / Mitad Caramelo', precio: 65.00, imagenUrl: '' },
@@ -11,13 +15,68 @@ const MOCK_CANDYBAR = [
 
 export const ProcesoCompra = () => {
   const { state, dispatch } = useCine();
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const totalEntradas = state.butacasSeleccionadas.reduce((acc, b) => acc + b.precio, 0);
   const totalSnacks = state.candyBarSeleccionado.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
   const total = totalEntradas + totalSnacks;
+  // `total` ya es el precio real por entrada (state.precioUnitario, traído de
+  // GET /precios/:id según funcion.idPrecio) — pero no incluye descuentos por promoción,
+  // esos solo los calcula el backend. Una vez que POST /ventas responde, su `total` real
+  // (precio × entradas − descuento de PromocionesService) reemplaza este cálculo local.
+  const totalReal = state.ventaCreada ? Number(state.ventaCreada.total) : total;
+  const fechaFuncionLegible = state.funcionSeleccionada
+    ? new Date(`${state.funcionSeleccionada.fecha}T00:00:00`).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' })
+    : '';
+  const horaFuncionLegible = state.funcionSeleccionada?.horaInicio.slice(0, 5) ?? '';
+  const sala = state.salaSeleccionada;
+
+  // `funcionSeleccionada` ya llega resuelta desde PeliculaCard.tsx (el usuario elige un
+  // horario real en la cartelera) — acá solo falta pedir la disponibilidad de esa función.
+  // Depender de `idFuncion` (primitivo) y no del objeto `funcionSeleccionada` entero evita
+  // el loop de limpieza/re-disparo que tuvo esta pantalla cuando el propio efecto seteaba
+  // un objeto que también estaba en sus dependencias.
+  useEffect(() => {
+    const idFuncion = state.funcionSeleccionada?.idFuncion;
+    const idPrecio = state.funcionSeleccionada?.idPrecio;
+    const idSala = state.funcionSeleccionada?.idSala;
+    if (!idFuncion || !idSala || !token) {
+      return;
+    }
+
+    let cancelado = false;
+
+    (async () => {
+      dispatch({ type: 'SET_CARGANDO_DISPONIBILIDAD', payload: true });
+      try {
+        // El precio se pide en paralelo, no bloquea la disponibilidad: si la función no
+        // tiene idPrecio asignado (caso raro, ver VentasService.crear del backend) el
+        // total simplemente queda en 0 hasta la confirmación, como antes.
+        const [disponibilidad, precio, sala] = await Promise.all([
+          obtenerDisponibilidad(idFuncion, token),
+          idPrecio ? obtenerPrecio(idPrecio, token) : Promise.resolve(null),
+          obtenerSala(idSala, token),
+        ]);
+        if (!cancelado) {
+          dispatch({ type: 'SET_DISPONIBILIDAD', payload: disponibilidad });
+          dispatch({ type: 'SET_PRECIO_UNITARIO', payload: precio?.valor ?? null });
+          dispatch({ type: 'SET_SALA_SELECCIONADA', payload: sala });
+        }
+      } catch (error) {
+        console.error('No se pudo cargar la disponibilidad real de la función.', error);
+      } finally {
+        if (!cancelado) {
+          dispatch({ type: 'SET_CARGANDO_DISPONIBILIDAD', payload: false });
+        }
+      }
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [state.funcionSeleccionada?.idFuncion, state.funcionSeleccionada?.idPrecio, state.funcionSeleccionada?.idSala, token, dispatch]);
 
   const volverACartelera = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
@@ -100,7 +159,7 @@ export const ProcesoCompra = () => {
             <div className="lg:col-span-7 flex flex-col gap-space-md">
               <div className="relative overflow-hidden rounded-xl bg-surface-container-low shadow-[0_20px_50px_rgba(0,0,0,0.85)]">
                 <div className="relative w-full h-44 overflow-hidden">
-                  <img src={state.peliculaSeleccionada?.posterUrl} alt="" className="w-full h-full object-cover object-center filter brightness-50 contrast-125" />
+                  <img src={state.peliculaSeleccionada ? (state.peliculaSeleccionada.posterUrl ?? posterFor(state.peliculaSeleccionada.idPelicula)) : undefined} alt="" className="w-full h-full object-cover object-center filter brightness-50 contrast-125" />
                   <div className="absolute inset-0 bg-gradient-to-t from-surface-container-low via-surface-container-low/60 to-transparent"></div>
                   <div className="absolute top-space-md left-space-md right-space-md flex items-center justify-between">
                     <div className="flex items-center gap-space-xs bg-surface-container-lowest/80 backdrop-blur-md px-space-sm py-space-2xs rounded-full">
@@ -109,7 +168,7 @@ export const ProcesoCompra = () => {
                     </div>
                   </div>
                   <div className="absolute bottom-space-md left-space-md right-space-md flex flex-col">
-                    <span className="font-label-code text-label-code text-secondary tracking-widest uppercase">LUMEN CINEMA VIP • SALA 3 IMAX LÁSER</span>
+                    <span className="font-label-code text-label-code text-secondary tracking-widest uppercase">LUMEN CINEMA • {sala?.nombre?.toUpperCase() ?? 'SALA POR CONFIRMAR'}</span>
                     <h2 className="font-headline-lg text-headline-lg text-primary tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{state.peliculaSeleccionada?.titulo}</h2>
                   </div>
                 </div>
@@ -118,8 +177,8 @@ export const ProcesoCompra = () => {
                   <div className="grid grid-cols-3 gap-space-sm p-space-md rounded-xl bg-surface-container">
                     <div className="flex flex-col">
                       <span className="font-label-code text-label-code text-on-surface-variant uppercase">Fecha & Horario</span>
-                      <span className="font-headline-sm text-headline-sm text-on-surface mt-1">Hoy, 24 Oct</span>
-                      <span className="font-label-md text-label-md text-primary font-bold">{state.horarioSeleccionado}</span>
+                      <span className="font-headline-sm text-headline-sm text-on-surface mt-1">{fechaFuncionLegible}</span>
+                      <span className="font-label-md text-label-md text-primary font-bold">{horaFuncionLegible}</span>
                     </div>
                     <div className="flex flex-col items-center">
                       <span className="font-label-code text-label-code text-on-surface-variant uppercase">Puerta & Nivel</span>
@@ -128,8 +187,8 @@ export const ProcesoCompra = () => {
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="font-label-code text-label-code text-on-surface-variant uppercase">Auditorio</span>
-                      <span className="font-headline-sm text-headline-sm text-primary mt-1">Sala 03</span>
-                      <span className="font-label-md text-label-md text-tertiary">Laser 4K HDR</span>
+                      <span className="font-headline-sm text-headline-sm text-primary mt-1">{sala?.nombre ?? '—'}</span>
+                      <span className="font-label-md text-label-md text-tertiary">{sala?.tipo ?? 'Estándar'}</span>
                     </div>
                   </div>
 
@@ -145,7 +204,7 @@ export const ProcesoCompra = () => {
                     </div>
                     <div className="flex flex-col items-end gap-space-xs">
                       <span className="font-label-code text-label-code text-tertiary uppercase font-bold bg-tertiary/10 px-space-sm py-space-2xs rounded-full">{state.butacasSeleccionadas.length} Boletos VIP</span>
-                      <span className="font-headline-sm text-headline-sm text-on-surface">Bs. {total.toFixed(2)}</span>
+                      <span className="font-headline-sm text-headline-sm text-on-surface">Bs. {totalReal.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -155,7 +214,7 @@ export const ProcesoCompra = () => {
                         <span className="material-symbols-outlined text-[20px]">qr_code_scanner</span>
                         <span className="font-label-code text-label-code uppercase tracking-widest font-bold">Escaneo Obligatorio</span>
                       </div>
-                      <span className="font-body-sm text-body-sm text-on-surface-variant max-w-xs">Coloca este código frente al visor óptico en el torniquete de acceso o muestra en Sala 3.</span>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant max-w-xs">Coloca este código frente al visor óptico en el torniquete de acceso o muestra en {sala?.nombre ?? 'la sala'}.</span>
                     </div>
                     <div className="relative p-space-sm bg-surface-bright rounded-xl shadow-[0_0_24px_rgba(245,158,11,0.2)] flex flex-col items-center">
                       <div className="p-space-xs bg-surface-container-lowest rounded-lg shadow-inner">
@@ -308,13 +367,13 @@ export const ProcesoCompra = () => {
             </div>
 
             <div className="flex items-center gap-space-md pb-space-sm bg-surface-container-low p-space-sm rounded-xl">
-              <img src={state.peliculaSeleccionada?.posterUrl} alt="" className="w-20 h-28 object-cover rounded-lg shadow-md shrink-0" />
+              <img src={state.peliculaSeleccionada ? (state.peliculaSeleccionada.posterUrl ?? posterFor(state.peliculaSeleccionada.idPelicula)) : undefined} alt="" className="w-20 h-28 object-cover rounded-lg shadow-md shrink-0" />
               <div className="flex flex-col gap-space-2xs">
                 <span className="font-headline-sm text-headline-sm text-on-surface line-clamp-1">{state.peliculaSeleccionada?.titulo}</span>
-                <span className="font-body-sm text-body-sm text-primary font-bold">Sala 3 • IMAX Láser</span>
+                <span className="font-body-sm text-body-sm text-primary font-bold">{sala?.nombre ?? 'Sala por confirmar'}{sala?.tipo ? ` • ${sala.tipo}` : ''}</span>
                 <div className="flex items-center gap-space-xs text-on-surface-variant font-label-code text-label-code">
                   <span className="material-symbols-outlined text-[16px] text-secondary">calendar_today</span>
-                  <span>Hoy 24 Oct, {state.horarioSeleccionado}</span>
+                  <span>{fechaFuncionLegible}, {horaFuncionLegible}</span>
                 </div>
                 <div className="flex items-center gap-space-xs text-on-surface-variant font-label-code text-label-code">
                   <span className="material-symbols-outlined text-[16px] text-secondary">surround_sound</span>
@@ -390,7 +449,7 @@ export const ProcesoCompra = () => {
             <div className="flex items-end justify-between mt-auto">
               <div className="flex flex-col">
                 <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-widest">Importe Final</span>
-                <span className="font-display-hero text-[38px] leading-none text-primary font-extrabold">{total.toFixed(2)} <span className="text-headline-sm text-on-surface">Bs</span></span>
+                <span className="font-display-hero text-[38px] leading-none text-primary font-extrabold">{totalReal.toFixed(2)} <span className="text-headline-sm text-on-surface">Bs</span></span>
               </div>
             </div>
 

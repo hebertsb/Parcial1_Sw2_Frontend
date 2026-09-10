@@ -70,7 +70,10 @@ export const Layout = () => {
               <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
               <div className="flex flex-col">
                 <span className="font-label-code text-label-code text-on-surface-variant uppercase">Sala Asignada</span>
-                <span className="font-label-md text-label-md text-on-surface font-bold">VIP Atmos 3 • Kiosco 04</span>
+                <span className="font-label-md text-label-md text-on-surface font-bold">
+                  {state.salaSeleccionada?.nombre ?? 'Sin asignar'}
+                  {state.salaSeleccionada?.tipo ? ` • ${state.salaSeleccionada.tipo}` : ''}
+                </span>
               </div>
             </div>
           </div>
