@@ -1,11 +1,26 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 
-interface HomeProps {
-  onNavigate: (view: 'cartelera') => void;
-  onVoiceMode: () => void;
-}
+export const Home = () => {
+  const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const { dispatch } = useCine();
 
-export const Home = ({ onNavigate, onVoiceMode }: HomeProps) => {
+  const onNavigate = () => {
+    dispatch({ type: 'RESETEAR_COMPRA' });
+    navigate('/cartelera');
+  };
+
+  /** Voz requiere cuenta de Google — ver Login.tsx. */
+  const onVoiceMode = () => {
+    if (usuario) {
+      navigate('/voz');
+      return;
+    }
+    navigate('/login', { state: { from: { pathname: '/voz' } } });
+  };
+
   return (
     <div className="flex flex-col w-full relative overflow-hidden select-none">
       {/* Dynamic Cinematic Ambient Lighting & Dust Particle Simulation */}
@@ -127,7 +142,7 @@ export const Home = ({ onNavigate, onVoiceMode }: HomeProps) => {
 
           {/* PORTAL B: Visual Touch Kiosk Exploration */}
           <div 
-            onClick={() => onNavigate('cartelera')}
+            onClick={onNavigate}
             className="relative group bg-surface-container-low rounded-xl p-space-xl flex flex-col justify-between shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden cursor-pointer"
           >
             <div className="absolute -top-24 -right-24 w-72 h-72 bg-primary/15 rounded-full blur-2xl pointer-events-none transition-all duration-500 group-hover:bg-primary/25"></div>

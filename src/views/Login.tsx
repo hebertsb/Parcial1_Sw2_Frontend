@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 
-interface LoginProps {
-  onLoggedIn: () => void;
-  onBack?: () => void;
-}
-
-export const Login = ({ onLoggedIn, onBack }: LoginProps) => {
+export const Login = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
 
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
@@ -21,7 +21,7 @@ export const Login = ({ onLoggedIn, onBack }: LoginProps) => {
     setCargando(true);
     try {
       await login(credentialResponse.credential);
-      onLoggedIn();
+      navigate(from, { replace: true });
     } catch {
       setError('No se pudo iniciar sesión. Intenta de nuevo.');
     } finally {
@@ -64,15 +64,13 @@ export const Login = ({ onLoggedIn, onBack }: LoginProps) => {
           <p className="font-body-sm text-body-sm text-error text-center">{error}</p>
         )}
 
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
-            type="button"
-          >
-            Volver
-          </button>
-        )}
+        <button
+          onClick={() => navigate(-1)}
+          className="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
+          type="button"
+        >
+          Volver
+        </button>
       </div>
     </div>
   );

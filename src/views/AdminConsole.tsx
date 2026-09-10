@@ -1,6 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCine } from '../controllers/CineContext';
 
-export const AdminConsole = ({ onBack }: { onBack: () => void }) => {
+export const AdminConsole = () => {
+  const navigate = useNavigate();
+  const { dispatch } = useCine();
+  const onBack = () => {
+    dispatch({ type: 'RESETEAR_COMPRA' });
+    navigate('/');
+  };
   const [activeTab, setActiveTab] = useState<'cartelera' | 'telemetria' | 'logs' | 'promos' | 'salas'>('cartelera');
 
   return (

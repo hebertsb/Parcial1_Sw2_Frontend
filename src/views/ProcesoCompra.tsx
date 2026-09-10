@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { SeleccionButacas } from '../components/widgets/SeleccionButacas';
 import { CandyBarSelection } from '../components/widgets/CandyBarSelection';
@@ -7,12 +9,20 @@ const MOCK_CANDYBAR = [
   { id: 'c1', nombre: 'Combo Pareja Épico', descripcion: 'Mitad Salada / Mitad Caramelo', precio: 65.00, imagenUrl: '' },
 ];
 
-export const ProcesoCompra = ({ onVoiceCommand }: { onVoiceCommand?: () => void }) => {
+export const ProcesoCompra = () => {
   const { state, dispatch } = useCine();
-  
+  const { usuario } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const totalEntradas = state.butacasSeleccionadas.reduce((acc, b) => acc + b.precio, 0);
   const totalSnacks = state.candyBarSeleccionado.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
   const total = totalEntradas + totalSnacks;
+
+  const volverACartelera = () => {
+    dispatch({ type: 'RESETEAR_COMPRA' });
+    navigate('/cartelera');
+  };
 
   const handleNextStep = () => {
     if (state.estadoCompra === 'seleccionando_asientos') {
@@ -30,9 +40,16 @@ export const ProcesoCompra = ({ onVoiceCommand }: { onVoiceCommand?: () => void 
     } else if (state.estadoCompra === 'seleccionando_candybar') {
       dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'seleccionando_asientos' });
     } else if (state.estadoCompra === 'seleccionando_asientos') {
-      dispatch({ type: 'RESETEAR_COMPRA' });
+      volverACartelera();
     }
   };
+
+  if (!state.peliculaSeleccionada) {
+    return <Navigate to="/cartelera" replace />;
+  }
+  if (!usuario) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
   const hasSnacks = state.candyBarSeleccionado.length > 0;
   
@@ -72,7 +89,7 @@ export const ProcesoCompra = ({ onVoiceCommand }: { onVoiceCommand?: () => void 
               </div>
             </div>
             <div className="flex items-center gap-space-md w-full md:w-auto justify-end">
-              <button onClick={() => dispatch({ type: 'RESETEAR_COMPRA' })} className="h-touch-target-kiosk px-space-lg rounded-xl bg-surface-container-highest hover:bg-error-container hover:text-on-error-container text-on-surface font-label-lg text-label-lg flex items-center gap-space-xs transition-all duration-300 shadow-md active:scale-95">
+              <button onClick={volverACartelera} className="h-touch-target-kiosk px-space-lg rounded-xl bg-surface-container-highest hover:bg-error-container hover:text-on-error-container text-on-surface font-label-lg text-label-lg flex items-center gap-space-xs transition-all duration-300 shadow-md active:scale-95">
                 <span className="material-symbols-outlined text-[22px]">logout</span>
                 <span>Finalizar y Salir</span>
               </button>
@@ -190,7 +207,7 @@ export const ProcesoCompra = ({ onVoiceCommand }: { onVoiceCommand?: () => void 
                   <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
                   <span className="font-label-code text-label-code uppercase tracking-wider">Transacción Cifrada TLS 1.3</span>
                 </div>
-                <button onClick={() => dispatch({ type: 'RESETEAR_COMPRA' })} className="h-touch-target-min px-space-lg rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary-container transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 flex items-center gap-space-xs">
+                <button onClick={volverACartelera} className="h-touch-target-min px-space-lg rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary-container transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 flex items-center gap-space-xs">
                   <span className="material-symbols-outlined text-[20px]">home</span>
                   <span>Volver al Inicio</span>
                 </button>
