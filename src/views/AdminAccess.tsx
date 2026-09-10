@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSuccess: () => void }) => {
+export const AdminAccess = () => {
+  const navigate = useNavigate();
+  const onBack = () => navigate('/');
+  const onSuccess = () => navigate('/admin/console');
   const [activeRole, setActiveRole] = useState<'ADMIN' | 'MANAGER' | 'TECH'>('ADMIN');
   const [method, setMethod] = useState<'pin' | 'nfc' | 'voice'>('pin');
   const [pin, setPin] = useState('');
@@ -33,6 +37,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
 
 
   return (
+    <div className="min-h-screen bg-surface-container-lowest text-on-surface">
     <div className="flex flex-col w-full max-w-7xl mx-auto px-4 py-8 relative">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-surface-container-low p-4 rounded-xl shadow-md">
@@ -318,6 +323,7 @@ export const AdminAccess = ({ onBack, onSuccess }: { onBack: () => void, onSucce
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

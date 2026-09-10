@@ -1,11 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import { Pelicula } from '../../core/types/pelicula.types';
 import { useCine } from '../../controllers/CineContext';
 
 export const PeliculaCard = ({ pelicula }: { pelicula: Pelicula }) => {
   const { dispatch } = useCine();
+  const navigate = useNavigate();
 
   const handleSeleccionar = (horario: string, isVip: boolean = false) => {
     dispatch({ type: 'SELECCIONAR_PELICULA', payload: { pelicula, horario } });
+    navigate('/compra');
   };
 
   return (
