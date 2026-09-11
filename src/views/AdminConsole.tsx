@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
@@ -6,24 +6,19 @@ import { AdminReportes } from './admin/AdminReportes';
 import { AdminAuditoria } from './admin/AdminAuditoria';
 import { AdminCartelera } from './admin/AdminCartelera';
 import { AdminSalas } from './admin/AdminSalas';
+import { AdminUsuarios } from './admin/AdminUsuarios';
 
-type AdminTab = 'cartelera' | 'reportes' | 'auditoria' | 'promos' | 'salas';
+type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas';
 
 const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'cartelera', icon: 'movie', label: 'Cartelera & Funciones' },
   { tab: 'reportes', icon: 'analytics', label: 'Reportes & Ventas' },
+  { tab: 'usuarios', icon: 'manage_accounts', label: 'Usuarios' },
   { tab: 'auditoria', icon: 'security_update_good', label: 'Auditoría & Logs' },
   { tab: 'promos', icon: 'sell', label: 'Precios & Promos' },
   { tab: 'salas', icon: 'weekend', label: 'Configuración Salas' },
 ];
 
-/**
- * Shell del panel admin: sidebar + topbar + switch de tab. `cartelera` (películas +
- * funciones), `reportes`, `auditoria` y `salas` ya están conectados a datos reales
- * (`GET/POST/PATCH/DELETE /peliculas`, `/funciones`, `/salas`, `GET /reportes/*`,
- * `GET /audit/log-acciones`); `promos` (CRUD de precios/promociones) queda pendiente,
- * próximo módulo de la Fase 3.
- */
 export const AdminConsole = () => {
   const navigate = useNavigate();
   const { dispatch } = useCine();
@@ -109,6 +104,7 @@ export const AdminConsole = () => {
         <main className="w-full pt-20 bg-background flex-grow">
           {activeTab === 'cartelera' && <AdminCartelera />}
           {activeTab === 'reportes' && <AdminReportes />}
+          {activeTab === 'usuarios' && <AdminUsuarios />}
           {activeTab === 'auditoria' && <AdminAuditoria />}
           {activeTab === 'salas' && <AdminSalas />}
           {activeTab === 'promos' && (
