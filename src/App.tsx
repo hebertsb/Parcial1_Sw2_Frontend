@@ -1,12 +1,10 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { CineProvider } from './controllers/CineContext';
+import {
+ CineProvider } from './controllers/CineContext';
 import { Layout } from './routes/Layout';
 import { RequireAuth } from './routes/RequireAuth';
+import {
+ RequireAdmin } from './routes/RequireAdmin';
 import { Home } from './views/Home';
 import { Cartelera } from './views/Cartelera';
 import { ProcesoCompra } from './views/ProcesoCompra';
@@ -27,7 +25,14 @@ export default function App() {
             <Route path="/login" element={<Login />} />
           </Route>
           <Route path="/admin" element={<AdminAccess />} />
-          <Route path="/admin/console" element={<AdminConsole />} />
+          <Route
+            path="/admin/console"
+            element={
+              <RequireAdmin>
+                <AdminConsole />
+              </RequireAdmin>
+            }
+          />
           <Route
             path="/voz"
             element={
