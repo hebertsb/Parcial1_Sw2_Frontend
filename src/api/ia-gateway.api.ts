@@ -2,7 +2,7 @@
 
 export interface AccionIaPayload {
   accion: {
-    tipo: 'crear_pelicula' | 'actualizar_pelicula' | 'crear_funcion' | 'cancelar_funcion' | 'crear_venta';
+    tipo: 'crear_pelicula' | 'actualizar_pelicula' | 'crear_funcion' | 'cancelar_funcion' | 'crear_venta' | 'crear_pago';
     [key: string]: unknown;
   };
   contexto: {
