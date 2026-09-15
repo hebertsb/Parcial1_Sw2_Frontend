@@ -7,6 +7,7 @@ import { AdminAuditoria } from './admin/AdminAuditoria';
 import { AdminCartelera } from './admin/AdminCartelera';
 import { AdminSalas } from './admin/AdminSalas';
 import { AdminUsuarios } from './admin/AdminUsuarios';
+import { AdminPreciosPromos } from './admin/AdminPreciosPromos';
 
 type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas';
 
@@ -107,14 +108,7 @@ export const AdminConsole = () => {
           {activeTab === 'usuarios' && <AdminUsuarios />}
           {activeTab === 'auditoria' && <AdminAuditoria />}
           {activeTab === 'salas' && <AdminSalas />}
-          {activeTab === 'promos' && (
-            <div className="w-full h-full flex items-center justify-center p-space-xl">
-              <div className="flex flex-col items-center justify-center gap-space-md opacity-50">
-                <span className="material-symbols-outlined text-[64px]">engineering</span>
-                <span className="font-headline-md text-headline-md text-on-surface-variant">Módulo en Desarrollo</span>
-              </div>
-            </div>
-          )}
+          {activeTab === 'promos' && <AdminPreciosPromos />}
         </main>
       </div>
     </div>
