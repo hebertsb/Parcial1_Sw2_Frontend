@@ -2,13 +2,20 @@ import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'r
 import { useNavigate } from 'react-router-dom';
 import { sendVoiceMessage } from '../api/voice.api';
 import { useCine } from '../controllers/CineContext';
+import { useAuth } from '../controllers/AuthContext';
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 export const VoiceAgent = () => {
   const navigate = useNavigate();
   const { state: cineState } = useCine();
+  const { usuario } = useAuth();
   const onClose = () => navigate(cineState.peliculaSeleccionada ? '/compra' : '/cartelera');
+
+  // Un solo id para toda esta sesion de voz (se recrea si se desmonta la
+  // pantalla, ej. al volver a entrar en modo voz) — agrupa los turnos de
+  // una misma conversacion para cuando el orquestador tenga historial.
+  const sesionIdRef = useRef(crypto.randomUUID());
 
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isMuted, setIsMuted] = useState(false);
@@ -102,7 +109,7 @@ export const VoiceAgent = () => {
     console.log('[voz] 7. enviando al backend, tamaño del blob:', audioBlob.size);
     setOrbState('thinking');
     try {
-      const result = await sendVoiceMessage(audioBlob);
+      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current);
       console.log('[voz] 8. respuesta del backend:', result);
       setTranscript(result.transcript);
       setReplyText(result.replyText);

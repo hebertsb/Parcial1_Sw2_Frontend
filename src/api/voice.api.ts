@@ -15,10 +15,21 @@ export interface VoiceChatResult {
  * necesite). No usa apiFetch: esta API recibe FormData y devuelve audio
  * binario, no JSON, y sus errores vienen como { detail } (FastAPI), no
  * { message, code } (Nest).
+ *
+ * rol y sesionId son obligatorios en el backend (RF11: el agente necesita
+ * saber quien habla antes de decidir que puede hacer) y sesionId agrupa los
+ * turnos de una misma conversacion de voz para cuando el orquestador tenga
+ * historial.
  */
-export async function sendVoiceMessage(audioBlob: Blob): Promise<VoiceChatResult> {
+export async function sendVoiceMessage(
+  audioBlob: Blob,
+  rol: 'cliente' | 'administrador',
+  sesionId: string,
+): Promise<VoiceChatResult> {
   const form = new FormData();
   form.append('audio', audioBlob, 'grabacion.webm');
+  form.append('rol', rol);
+  form.append('sesion_id', sesionId);
 
   const res = await fetch(`${VOICE_API_URL}/voice-chat`, {
     method: 'POST',
