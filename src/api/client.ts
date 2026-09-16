@@ -35,6 +35,13 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => null);
+    if (res.status === 401) {
+      // El token guardado ya no sirve (vencio, o el backend lo rechazo por otra
+      // razon) — avisar a AuthContext para que cierre la sesion en vez de dejar
+      // a la app creyendo que sigue logueada mientras cada llamada real falla
+      // en silencio (ver auditoria 2026-09-15).
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
     throw new ApiError(
       errorBody?.message ?? `Error ${res.status} al llamar ${path}`,
       res.status,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { Funcion, CrearFuncionInput } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import type { Sala } from '../../core/types/sala.types';
@@ -42,7 +42,7 @@ export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, err
     if (!funcion && idPrecio === 0 && precios[0]) setIdPrecio(precios[0].idPrecio);
   }, [precios, funcion, idPrecio]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onGuardar({ idPelicula, idSala, idPrecio: idPrecio || undefined, fecha, horaInicio, horaFin });
   };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { subirImagen, CloudinaryError } from '../../api/cloudinary.api';
 import { posterFor } from '../../core/posters';
 import type { Pelicula, CrearPeliculaInput } from '../../core/types/pelicula.types';
@@ -24,7 +24,7 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
   const [subiendo, setSubiendo] = useState(false);
   const [errorSubida, setErrorSubida] = useState<string | null>(null);
 
-  const handleArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleArchivo = async (e: ChangeEvent<HTMLInputElement>) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
     setSubiendo(true);
@@ -38,7 +38,7 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onGuardar({
       titulo,

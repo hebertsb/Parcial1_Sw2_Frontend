@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../../controllers/AuthContext';
 import {
   listarUsuarios,
@@ -70,7 +70,7 @@ export const AdminUsuarios = () => {
     setUsuarioEditar(null);
   };
 
-  const handleGuardar = async (e: React.FormEvent) => {
+  const handleGuardar = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
     setGuardando(true);

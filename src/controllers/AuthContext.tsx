@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
 import { authReducer, initialAuthState, AuthState } from './auth.reducer';
 import { loginConGoogle as apiLoginConGoogle, loginSimplificado as apiLoginSimplificado } from '../api/auth.api';
 import { Rol, Usuario } from '../core/types/usuario.types';
@@ -17,6 +17,11 @@ function decodeJwtPayload(token: string): Usuario | null {
     );
     const payload = JSON.parse(json);
     if (typeof payload.sub !== 'number' || !payload.nombre || !payload.rol) return null;
+    // El backend firma el token con 8h de vida (JWT_EXPIRES_IN_SECONDS) — sin este
+    // chequeo, un token vencido en localStorage se seguia leyendo como "logueado"
+    // indefinidamente, mientras cada llamada real al backend fallaba con 401 en
+    // silencio (ver auditoria 2026-09-15).
+    if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) return null;
     return { idUsuario: payload.sub, nombre: payload.nombre, rol: payload.rol };
   } catch {
     return null;
@@ -69,6 +74,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     dispatch({ type: 'LOGOUT' });
   };
+
+  // Si cualquier llamada al backend devuelve 401 (token vencido o invalido a
+  // mitad de sesion), apiFetch dispara este evento — cerramos sesion en vez de
+  // dejar a la app mostrando "logueado" mientras todo falla en silencio.
+  useEffect(() => {
+    window.addEventListener('auth:unauthorized', logout);
+    return () => window.removeEventListener('auth:unauthorized', logout);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ ...state, loginConGoogle, loginSimplificado, logout }}>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { Sala, CrearSalaInput } from '../../core/types/sala.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
@@ -21,7 +21,7 @@ export const SalaForm = ({ sala, guardando, error, onGuardar, onCancelar }: Sala
   const [tipo, setTipo] = useState(sala?.tipo ?? '');
   const [tiempoLimpiezaMin, setTiempoLimpiezaMin] = useState(sala?.tiempoLimpiezaMin ?? 20);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onGuardar({
       nombre,

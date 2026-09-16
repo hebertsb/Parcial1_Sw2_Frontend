@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { Promocion, CrearPromocionInput, TipoDescuento } from '../../core/types/promocion.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
@@ -21,7 +21,7 @@ export const PromocionForm = ({ promocion, guardando, error, onGuardar, onCancel
   const [fechaFin, setFechaFin] = useState(promocion?.fechaFin ?? '');
   const [activa, setActiva] = useState(promocion?.activa ?? true);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onGuardar({
       nombre,

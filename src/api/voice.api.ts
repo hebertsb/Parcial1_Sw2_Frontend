@@ -1,4 +1,5 @@
 import { ApiError } from './client';
+import type { AccionPropuesta, VoiceResponseType } from '../core/types/voice.types';
 
 const VOICE_API_URL = import.meta.env.VITE_VOICE_API_URL ?? 'http://localhost:8000';
 
@@ -6,6 +7,12 @@ export interface VoiceChatResult {
   transcript: string;
   replyText: string;
   audioUrl: string;
+  /** RF18: que tipo de resultado devolvio el orquestador (ver back_agent/app/orquestador.py). */
+  tipo: VoiceResponseType;
+  /** Presente solo si tipo === 'resultado_consulta' (ej. peliculas encontradas). */
+  datos: unknown;
+  /** Presente solo si tipo es 'confirmacion_pendiente' o 'accion_confirmada'. */
+  accionPropuesta: AccionPropuesta | null;
 }
 
 /**
@@ -46,7 +53,15 @@ export async function sendVoiceMessage(
 
   const transcript = decodeURIComponent(res.headers.get('X-Transcript') ?? '');
   const replyText = decodeURIComponent(res.headers.get('X-Reply-Text') ?? '');
+  const tipo = (res.headers.get('X-Response-Type') as VoiceResponseType | null) ?? 'respuesta_texto';
+
+  const datosRaw = res.headers.get('X-Datos');
+  const datos = datosRaw ? JSON.parse(decodeURIComponent(datosRaw)) : null;
+
+  const accionRaw = res.headers.get('X-Accion-Propuesta');
+  const accionPropuesta = accionRaw ? (JSON.parse(decodeURIComponent(accionRaw)) as AccionPropuesta) : null;
+
   const audioUrl = URL.createObjectURL(await res.blob());
 
-  return { transcript, replyText, audioUrl };
+  return { transcript, replyText, audioUrl, tipo, datos, accionPropuesta };
 }
