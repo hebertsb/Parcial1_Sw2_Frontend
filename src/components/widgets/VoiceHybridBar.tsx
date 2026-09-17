@@ -11,6 +11,17 @@ const ETIQUETA_INTENCION: Record<string, string> = {
   comprar_entrada: 'Compra de entradas',
   seleccionar_asiento: 'Selección de butacas',
   comprar_dulceria: 'Pedido de dulcería',
+  crear_pelicula: 'Alta de película',
+  actualizar_pelicula: 'Edición de película',
+  eliminar_pelicula: 'Eliminación de película',
+  crear_funcion: 'Programación de función',
+  cancelar_funcion: 'Cancelación de función',
+  crear_promocion: 'Alta de promoción',
+  actualizar_promocion: 'Edición de promoción',
+  eliminar_promocion: 'Eliminación de promoción',
+  crear_precio: 'Alta de precio',
+  actualizar_precio: 'Edición de precio',
+  eliminar_precio: 'Eliminación de precio',
 };
 
 /**
@@ -22,7 +33,7 @@ const ETIQUETA_INTENCION: Record<string, string> = {
  * franja chica arriba.
  */
 export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const sesionIdRef = useRef(crypto.randomUUID());
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -68,7 +79,7 @@ export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
   const enviar = async (audioBlob: Blob) => {
     setEstado('procesando');
     try {
-      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current);
+      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current, token);
       setResultado(result);
       if (audioPlayerRef.current) {
         audioPlayerRef.current.src = result.audioUrl;
@@ -88,7 +99,15 @@ export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
   const datosCartelera = resultado?.tipo === 'resultado_consulta' ? (resultado.datos as DatosConsultaCartelera | null) : null;
   const tieneListaPeliculas = !!datosCartelera?.peliculas?.length;
   const tieneAccion = !!resultado?.accionPropuesta && (resultado.tipo === 'confirmacion_pendiente' || resultado.tipo === 'accion_confirmada');
-  const hayContenido = tieneListaPeliculas || tieneAccion;
+  // Resultado de una consulta de solo lectura que no es la cartelera (ej.
+  // consultar_reportes) -- se muestra como una tarjeta genérica de clave/valor
+  // en vez de no mostrar nada, sin tener que conocer la forma exacta de cada
+  // tool nueva que se agregue a futuro.
+  const datosGenericos =
+    resultado?.tipo === 'resultado_consulta' && resultado.datos && !tieneListaPeliculas && !(datosCartelera && 'error' in datosCartelera)
+      ? (resultado.datos as Record<string, unknown>)
+      : null;
+  const hayContenido = tieneListaPeliculas || tieneAccion || !!datosGenericos;
 
   const estadoTexto = {
     idle: 'Tocá el micrófono para hablar',
@@ -316,6 +335,34 @@ export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
                 ))}
               </div>
             )}
+
+            {datosGenericos && (() => {
+              const reporte = (datosGenericos.reporte ?? datosGenericos) as unknown;
+              const filas = Array.isArray(reporte) ? (reporte as Record<string, unknown>[]) : [reporte as Record<string, unknown>];
+              return (
+                <div className="flex flex-col gap-space-md">
+                  {typeof datosGenericos.tipo_reporte === 'string' && (
+                    <span className="font-label-code text-label-code text-secondary uppercase tracking-wider">
+                      Reporte: {datosGenericos.tipo_reporte}
+                    </span>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-md">
+                    {filas.map((fila, i) => (
+                      <div key={i} className="flex flex-col gap-space-2xs bg-surface-container rounded-xl p-space-md shadow-md">
+                        {Object.entries(fila ?? {}).map(([k, v]) => (
+                          <div key={k} className="flex items-center justify-between gap-space-sm">
+                            <span className="font-label-code text-label-code text-on-surface-variant uppercase truncate">{k}</span>
+                            <span className="font-body-md text-body-md text-on-surface font-bold whitespace-nowrap">
+                              {Array.isArray(v) ? v.join(', ') : String(v)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {tieneAccion && resultado?.accionPropuesta && (
               <div className={`flex flex-col items-center text-center gap-space-md p-space-2xl rounded-2xl ${resultado.tipo === 'accion_confirmada' ? 'bg-tertiary/10' : 'bg-primary-container/15'}`}>

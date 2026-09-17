@@ -9,8 +9,14 @@ type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 export const VoiceAgent = () => {
   const navigate = useNavigate();
   const { state: cineState } = useCine();
-  const { usuario } = useAuth();
-  const onClose = () => navigate(cineState.peliculaSeleccionada ? '/compra' : '/cartelera');
+  const { usuario, token } = useAuth();
+  const onClose = () => {
+    if (usuario?.rol === 'administrador') {
+      navigate('/admin/console');
+      return;
+    }
+    navigate(cineState.peliculaSeleccionada ? '/compra' : '/cartelera');
+  };
 
   // Un solo id para toda esta sesion de voz (se recrea si se desmonta la
   // pantalla, ej. al volver a entrar en modo voz) — agrupa los turnos de
@@ -109,7 +115,7 @@ export const VoiceAgent = () => {
     console.log('[voz] 7. enviando al backend, tamaño del blob:', audioBlob.size);
     setOrbState('thinking');
     try {
-      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current);
+      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current, token);
       console.log('[voz] 8. respuesta del backend:', result);
       setTranscript(result.transcript);
       setReplyText(result.replyText);

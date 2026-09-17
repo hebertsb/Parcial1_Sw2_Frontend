@@ -35,11 +35,15 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => null);
-    if (res.status === 401) {
-      // El token guardado ya no sirve (vencio, o el backend lo rechazo por otra
-      // razon) — avisar a AuthContext para que cierre la sesion en vez de dejar
-      // a la app creyendo que sigue logueada mientras cada llamada real falla
-      // en silencio (ver auditoria 2026-09-15).
+    if (res.status === 401 && options.token) {
+      // Solo se cierra la sesion si la llamada llevaba un token y el backend
+      // lo rechazo (vencio, o dejo de servir) — eso si significa que la sesion
+      // activa murio (ver auditoria 2026-09-15). Un 401 SIN token (ej. un
+      // intento de login-simplificado con nombre/rol que no existe) es solo
+      // una credencial invalida, no la sesion actual: si no se filtra por
+      // options.token, un intento fallido de loguearse como otro usuario
+      // cierra la sesion de la cuenta con la que ya se estaba, que es el bug
+      // que se reporto (2026-09-17).
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     throw new ApiError(
