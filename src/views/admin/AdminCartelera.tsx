@@ -10,6 +10,7 @@ import type { Sala } from '../../core/types/sala.types';
 import type { Precio } from '../../core/types/precio.types';
 import { PeliculasPanel } from './PeliculasPanel';
 import { FuncionesPanel } from './FuncionesPanel';
+import { leerEstadoSesion, guardarEstadoSesion } from '../../core/sessionState';
 
 type SubTab = 'peliculas' | 'funciones';
 
@@ -21,7 +22,7 @@ type SubTab = 'peliculas' | 'funciones';
  */
 export const AdminCartelera = () => {
   const { token } = useAuth();
-  const [subTab, setSubTab] = useState<SubTab>('peliculas');
+  const [subTab, setSubTab] = useState<SubTab>(() => leerEstadoSesion('lumen_admin_cartelera_subtab', 'peliculas' as SubTab));
   const [peliculas, setPeliculas] = useState<Pelicula[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [precios, setPrecios] = useState<Precio[]>([]);
@@ -48,6 +49,10 @@ export const AdminCartelera = () => {
     void cargarTodo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    guardarEstadoSesion('lumen_admin_cartelera_subtab', subTab);
+  }, [subTab]);
 
   return (
     <div className="p-space-xl flex flex-col gap-space-lg">

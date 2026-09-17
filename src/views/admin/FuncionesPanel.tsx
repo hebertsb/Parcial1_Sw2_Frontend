@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { crearFuncion, actualizarFuncion, cancelarFuncion } from '../../api/funciones.api';
+import { crearPrecio } from '../../api/precios.api';
 import { ApiError } from '../../api/client';
 import type { Funcion, CrearFuncionInput } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
@@ -45,6 +46,19 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
     } catch (err) {
       console.error('No se pudo cancelar la función.', err);
     }
+  };
+
+  /**
+   * Atajo desde `FuncionForm` (ver comentario ahí) — crea el precio ya mismo (vigente
+   * desde hoy, sin expiración) y dispara `onCambio()` en segundo plano para que
+   * "Precios & Promos" también lo vea reflejado, sin bloquear al admin que solo
+   * quiere seguir completando la función.
+   */
+  const handleCrearPrecioRapido = async (valor: number) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const nuevo = await crearPrecio({ valor, vigenteDesde: hoy }, token);
+    void onCambio();
+    return nuevo;
   };
 
   const handleGuardar = async (input: CrearFuncionInput) => {
@@ -95,6 +109,7 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
           error={errorForm}
           onGuardar={handleGuardar}
           onCancelar={() => setMostrarForm(false)}
+          onCrearPrecioRapido={handleCrearPrecioRapido}
         />
       )}
 

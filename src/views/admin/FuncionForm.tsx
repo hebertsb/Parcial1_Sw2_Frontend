@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { ApiError } from '../../api/client';
 import type { Funcion, CrearFuncionInput } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import type { Sala } from '../../core/types/sala.types';
@@ -17,15 +18,76 @@ interface FuncionFormProps {
   error: string | null;
   onGuardar: (input: CrearFuncionInput) => void;
   onCancelar: () => void;
+  /**
+   * Atajo (2026-09-16): crea un precio nuevo (`vigenteDesde` = hoy, sin expiración) SIN
+   * salir de este form — antes había que ir a la pestaña "Precios & Promos" primero. El
+   * catálogo `precios` no se elimina (sigue permitiendo reusar un mismo precio en varias
+   * funciones y actualizarlo en un solo lugar); esto solo evita el viaje de ida y vuelta
+   * cuando el admin quiere un precio nuevo y puntual para esta función.
+   */
+  onCrearPrecioRapido: (valor: number) => Promise<Precio>;
 }
 
-export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, error, onGuardar, onCancelar }: FuncionFormProps) => {
+export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, error, onGuardar, onCancelar, onCrearPrecioRapido }: FuncionFormProps) => {
   const [idPelicula, setIdPelicula] = useState(funcion?.idPelicula ?? peliculas[0]?.idPelicula ?? 0);
   const [idSala, setIdSala] = useState(funcion?.idSala ?? salas[0]?.idSala ?? 0);
   const [idPrecio, setIdPrecio] = useState(funcion?.idPrecio ?? precios[0]?.idPrecio ?? 0);
   const [fecha, setFecha] = useState(funcion?.fecha ?? '');
   const [horaInicio, setHoraInicio] = useState(funcion?.horaInicio.slice(0, 5) ?? '');
   const [horaFin, setHoraFin] = useState(funcion?.horaFin.slice(0, 5) ?? '');
+
+  const [precioRecienCreado, setPrecioRecienCreado] = useState<Precio | null>(null);
+  const [creandoPrecio, setCreandoPrecio] = useState(false);
+  const [nuevoValorPrecio, setNuevoValorPrecio] = useState(0);
+  const [guardandoPrecio, setGuardandoPrecio] = useState(false);
+  const [errorPrecio, setErrorPrecio] = useState<string | null>(null);
+  const [avisoPrecio, setAvisoPrecio] = useState<string | null>(null);
+
+  const opcionesPrecios =
+    precioRecienCreado && !precios.some((p) => p.idPrecio === precioRecienCreado.idPrecio)
+      ? [...precios, precioRecienCreado]
+      : precios;
+
+  /**
+   * Antes de crear, busca si YA existe un precio con ese mismo valor vigente hoy —
+   * si lo hay, lo reusa (ni siquiera llama al backend) en vez de crear una fila
+   * duplicada en `precios`. Solo crea de verdad cuando no hay ningún match.
+   */
+  const buscarPrecioVigenteExistente = (valor: number): Precio | undefined => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const valorTexto = valor.toFixed(2);
+    return opcionesPrecios.find(
+      (p) =>
+        Number(p.valor).toFixed(2) === valorTexto &&
+        p.vigenteDesde <= hoy &&
+        (!p.vigenteHasta || hoy <= p.vigenteHasta),
+    );
+  };
+
+  const handleCrearPrecioRapido = async () => {
+    setErrorPrecio(null);
+    setAvisoPrecio(null);
+
+    const existente = buscarPrecioVigenteExistente(nuevoValorPrecio);
+    if (existente) {
+      setIdPrecio(existente.idPrecio);
+      setCreandoPrecio(false);
+      setAvisoPrecio(`Ya existía un precio de ${Number(existente.valor).toFixed(2)} Bs vigente — se usó ese en vez de crear uno nuevo.`);
+      return;
+    }
+
+    setGuardandoPrecio(true);
+    try {
+      const nuevo = await onCrearPrecioRapido(nuevoValorPrecio);
+      setPrecioRecienCreado(nuevo);
+      setIdPrecio(nuevo.idPrecio);
+      setCreandoPrecio(false);
+    } catch (err) {
+      setErrorPrecio(err instanceof ApiError ? err.message : 'No se pudo crear el precio.');
+    } finally {
+      setGuardandoPrecio(false);
+    }
+  };
 
   // Si el form se abre (o el usuario hace clic muy rápido) antes de que terminen de
   // cargar películas/salas/precios, el `useState` de arriba inicializa en 0 y se queda
@@ -66,9 +128,54 @@ export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, err
         </label>
         <label className="flex flex-col gap-space-2xs">
           <span className={LABEL}>Precio</span>
-          <select value={idPrecio} onChange={(e) => setIdPrecio(Number(e.target.value))} className={CAMPO}>
-            {precios.map((p) => <option key={p.idPrecio} value={p.idPrecio}>{p.valor} Bs</option>)}
-          </select>
+          {!creandoPrecio ? (
+            <div className="flex items-center gap-space-2xs">
+              <select value={idPrecio} onChange={(e) => setIdPrecio(Number(e.target.value))} className={CAMPO}>
+                {opcionesPrecios.map((p) => <option key={p.idPrecio} value={p.idPrecio}>{Number(p.valor).toFixed(2)} Bs</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => setCreandoPrecio(true)}
+                title="Crear un precio nuevo sin salir de este formulario"
+                className="shrink-0 h-11 px-space-sm rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-code text-label-code transition-colors"
+              >
+                + Nuevo
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-space-2xs">
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={nuevoValorPrecio}
+                onChange={(e) => setNuevoValorPrecio(Number(e.target.value))}
+                placeholder="Valor en Bs"
+                className={CAMPO}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => void handleCrearPrecioRapido()}
+                disabled={guardandoPrecio || nuevoValorPrecio <= 0}
+                className="shrink-0 h-11 px-space-sm rounded-lg bg-primary text-on-primary font-label-code text-label-code hover:bg-primary-container transition-colors disabled:opacity-50"
+              >
+                {guardandoPrecio ? '...' : 'Crear y usar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCreandoPrecio(false); setErrorPrecio(null); }}
+                className="shrink-0 h-11 px-space-sm rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-code text-label-code transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+          {errorPrecio && <span className="font-body-sm text-body-sm text-error">{errorPrecio}</span>}
+          {avisoPrecio && <span className="font-body-sm text-body-sm text-tertiary">{avisoPrecio}</span>}
+          <span className="font-body-sm text-body-sm text-on-surface-variant">
+            Se crea vigente desde hoy, sin fecha de expiración — para ajustar eso, editalo después en "Precios & Promos".
+          </span>
         </label>
       </div>
 

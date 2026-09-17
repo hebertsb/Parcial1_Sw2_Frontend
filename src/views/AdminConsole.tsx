@@ -1,15 +1,17 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
+import { leerEstadoSesion, guardarEstadoSesion } from '../core/sessionState';
 import { AdminReportes } from './admin/AdminReportes';
 import { AdminAuditoria } from './admin/AdminAuditoria';
 import { AdminCartelera } from './admin/AdminCartelera';
 import { AdminSalas } from './admin/AdminSalas';
 import { AdminUsuarios } from './admin/AdminUsuarios';
 import { AdminPreciosPromos } from './admin/AdminPreciosPromos';
+import { AdminDulceria } from './admin/AdminDulceria';
 
-type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas';
+type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'dulceria';
 
 const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'cartelera', icon: 'movie', label: 'Cartelera & Funciones' },
@@ -18,13 +20,20 @@ const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'auditoria', icon: 'security_update_good', label: 'Auditoría & Logs' },
   { tab: 'promos', icon: 'sell', label: 'Precios & Promos' },
   { tab: 'salas', icon: 'weekend', label: 'Configuración Salas' },
+  { tab: 'dulceria', icon: 'local_cafe', label: 'Dulcería' },
 ];
 
 export const AdminConsole = () => {
   const navigate = useNavigate();
   const { dispatch } = useCine();
   const { usuario, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('reportes');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => leerEstadoSesion('lumen_admin_tab', 'reportes' as AdminTab));
+
+  // Antes un F5 siempre volvía a "Reportes" (el valor inicial de `useState`),
+  // aunque estuvieras en "Películas" o cualquier otra pestaña — ver sessionState.ts.
+  useEffect(() => {
+    guardarEstadoSesion('lumen_admin_tab', activeTab);
+  }, [activeTab]);
 
   const onBack = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
@@ -109,6 +118,7 @@ export const AdminConsole = () => {
           {activeTab === 'auditoria' && <AdminAuditoria />}
           {activeTab === 'salas' && <AdminSalas />}
           {activeTab === 'promos' && <AdminPreciosPromos />}
+          {activeTab === 'dulceria' && <AdminDulceria />}
         </main>
       </div>
     </div>

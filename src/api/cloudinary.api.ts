@@ -12,15 +12,19 @@ export class CloudinaryError extends Error {}
  * Aceptable para el alcance de este proyecto (no producción real); si en algún momento
  * hace falta cerrar eso, la alternativa es un upload firmado (el backend genera la firma
  * con la API secret, nunca expuesta al cliente).
+ *
+ * `carpeta` (2026-09-16): antes tenía `'peliculas'` fijo — ahora la reciben tanto
+ * `PeliculaForm.tsx` (posters, carpeta `peliculas`) como `ProductoDulceriaForm.tsx`
+ * (fotos de dulcería, carpeta `dulceria`), misma cuenta y mismo preset, para no mezclar
+ * ambos tipos de imagen en una sola carpeta dentro de Cloudinary.
  */
-export async function subirImagen(archivo: File): Promise<string> {
+export async function subirImagen(archivo: File, carpeta: string = 'peliculas'): Promise<string> {
   const formData = new FormData();
   formData.append('file', archivo);
   formData.append('upload_preset', UPLOAD_PRESET);
-  // Organiza todos los posters en una sola carpeta dentro de la cuenta de Cloudinary, en
-  // vez de quedar sueltos en la raíz. Si el upload preset tiene el "Asset folder" fijado
-  // en el dashboard de Cloudinary, este valor se ignora silenciosamente (gana el preset).
-  formData.append('folder', 'peliculas');
+  // Si el upload preset tiene el "Asset folder" fijado en el dashboard de Cloudinary,
+  // este valor se ignora silenciosamente (gana el preset).
+  formData.append('folder', carpeta);
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
     method: 'POST',

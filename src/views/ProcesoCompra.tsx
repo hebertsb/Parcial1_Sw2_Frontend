@@ -9,10 +9,6 @@ import { obtenerPrecio } from '../api/precios.api';
 import { obtenerSala } from '../api/salas.api';
 import { posterFor } from '../core/posters';
 
-const MOCK_CANDYBAR = [
-  { id: 'c1', nombre: 'Combo Pareja Épico', descripcion: 'Mitad Salada / Mitad Caramelo', precio: 65.00, imagenUrl: '' },
-];
-
 export const ProcesoCompra = () => {
   const { state, dispatch } = useCine();
   const { usuario, token } = useAuth();
@@ -111,15 +107,6 @@ export const ProcesoCompra = () => {
   }
 
   const hasSnacks = state.candyBarSeleccionado.length > 0;
-  
-  const toggleSnackExpress = () => {
-    const item = MOCK_CANDYBAR[0];
-    if (hasSnacks) {
-      dispatch({ type: 'ACTUALIZAR_CANDYBAR', payload: { ...item, cantidad: 0 } });
-    } else {
-      dispatch({ type: 'ACTUALIZAR_CANDYBAR', payload: { ...item, cantidad: 1 } });
-    }
-  };
 
   // Completion view
   if (state.estadoCompra === 'completado') {
@@ -127,8 +114,6 @@ export const ProcesoCompra = () => {
       <div className="flex flex-col w-full relative overflow-hidden select-none bg-surface-container-lowest text-on-surface h-full">
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[85vw] max-w-[1100px] h-[580px] bg-gradient-to-b from-primary/15 via-secondary/5 to-transparent blur-[110px] rounded-full opacity-70"></div>
-          <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary-container/10 blur-[130px] rounded-full"></div>
-          <div className="absolute bottom-1/3 -right-40 w-[420px] h-[420px] bg-secondary-container/15 blur-[140px] rounded-full"></div>
         </div>
 
         <div className="max-w-6xl mx-auto flex flex-col gap-space-xl relative z-10 w-full">
@@ -144,7 +129,7 @@ export const ProcesoCompra = () => {
                   <span className="font-label-code text-label-code text-on-surface-variant">• Autorizado por Red Bancaria</span>
                 </div>
                 <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">¡Compra Confirmada con Éxito!</h1>
-                <p className="font-body-md text-body-md text-on-surface-variant">Tu transacción <span className="font-headline-sm text-headline-sm text-primary font-bold">#LMN-84920</span> ha sido procesada correctamente.</p>
+                <p className="font-body-md text-body-md text-on-surface-variant">Tu compra <span className="font-headline-sm text-headline-sm text-primary font-bold">#{state.ventaCreada?.idVenta ?? '—'}</span> fue procesada correctamente.</p>
               </div>
             </div>
             <div className="flex items-center gap-space-md w-full md:w-auto justify-end">
@@ -164,7 +149,7 @@ export const ProcesoCompra = () => {
                   <div className="absolute top-space-md left-space-md right-space-md flex items-center justify-between">
                     <div className="flex items-center gap-space-xs bg-surface-container-lowest/80 backdrop-blur-md px-space-sm py-space-2xs rounded-full">
                       <span className="material-symbols-outlined text-primary text-[16px]">stars</span>
-                      <span className="font-label-code text-label-code text-primary tracking-widest uppercase">VIP EXPANDED PASS</span>
+                      <span className="font-label-code text-label-code text-primary tracking-widest uppercase">{sala?.tipo ?? 'Entrada'} Pass</span>
                     </div>
                   </div>
                   <div className="absolute bottom-space-md left-space-md right-space-md flex flex-col">
@@ -174,16 +159,11 @@ export const ProcesoCompra = () => {
                 </div>
                 
                 <div className="p-space-lg flex flex-col gap-space-lg">
-                  <div className="grid grid-cols-3 gap-space-sm p-space-md rounded-xl bg-surface-container">
+                  <div className="grid grid-cols-2 gap-space-sm p-space-md rounded-xl bg-surface-container">
                     <div className="flex flex-col">
                       <span className="font-label-code text-label-code text-on-surface-variant uppercase">Fecha & Horario</span>
                       <span className="font-headline-sm text-headline-sm text-on-surface mt-1">{fechaFuncionLegible}</span>
                       <span className="font-label-md text-label-md text-primary font-bold">{horaFuncionLegible}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="font-label-code text-label-code text-on-surface-variant uppercase">Puerta & Nivel</span>
-                      <span className="font-headline-sm text-headline-sm text-secondary mt-1">Puerta A</span>
-                      <span className="font-label-md text-label-md text-on-surface">Segundo Nivel</span>
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="font-label-code text-label-code text-on-surface-variant uppercase">Auditorio</span>
@@ -198,44 +178,25 @@ export const ProcesoCompra = () => {
                         <span className="material-symbols-outlined text-[32px]">chair</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-wider">Butacas VIP Reclinables</span>
+                        <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-wider">Butacas{sala?.tipo ? ` ${sala.tipo}` : ''}</span>
                         <span className="font-display-hero-mobile text-display-hero-mobile text-primary font-bold tracking-tight">{state.butacasSeleccionadas.map(b => b.id).join(', ')}</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-space-xs">
-                      <span className="font-label-code text-label-code text-tertiary uppercase font-bold bg-tertiary/10 px-space-sm py-space-2xs rounded-full">{state.butacasSeleccionadas.length} Boletos VIP</span>
+                      <span className="font-label-code text-label-code text-tertiary uppercase font-bold bg-tertiary/10 px-space-sm py-space-2xs rounded-full">{state.butacasSeleccionadas.length} Boleto{state.butacasSeleccionadas.length === 1 ? '' : 's'}</span>
                       <span className="font-headline-sm text-headline-sm text-on-surface">Bs. {totalReal.toFixed(2)}</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-space-lg p-space-md rounded-xl bg-surface-container-lowest">
+                  <div className="flex items-center justify-between gap-space-lg p-space-md rounded-xl bg-surface-container-lowest">
                     <div className="flex flex-col items-start gap-space-xs">
                       <div className="flex items-center gap-space-xs text-primary">
-                        <span className="material-symbols-outlined text-[20px]">qr_code_scanner</span>
-                        <span className="font-label-code text-label-code uppercase tracking-widest font-bold">Escaneo Obligatorio</span>
+                        <span className="material-symbols-outlined text-[20px]">confirmation_number</span>
+                        <span className="font-label-code text-label-code uppercase tracking-widest font-bold">Código de compra</span>
                       </div>
-                      <span className="font-body-sm text-body-sm text-on-surface-variant max-w-xs">Coloca este código frente al visor óptico en el torniquete de acceso o muestra en {sala?.nombre ?? 'la sala'}.</span>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant max-w-xs">Mostralo en boletería o en {sala?.nombre ?? 'la sala'} si te lo piden.</span>
                     </div>
-                    <div className="relative p-space-sm bg-surface-bright rounded-xl shadow-[0_0_24px_rgba(245,158,11,0.2)] flex flex-col items-center">
-                      <div className="p-space-xs bg-surface-container-lowest rounded-lg shadow-inner">
-                        <svg className="w-24 h-24" fill="none" viewBox="0 0 100 100">
-                          <rect fill="#FFFFFF" height="100" width="100"></rect>
-                          <rect fill="#0C0E13" height="22" width="22" x="10" y="10"></rect>
-                          <rect fill="#FFFFFF" height="14" width="14" x="14" y="14"></rect>
-                          <rect fill="#0C0E13" height="8" width="8" x="17" y="17"></rect>
-                          <rect fill="#0C0E13" height="22" width="22" x="68" y="10"></rect>
-                          <rect fill="#FFFFFF" height="14" width="14" x="72" y="14"></rect>
-                          <rect fill="#0C0E13" height="8" width="8" x="75" y="17"></rect>
-                          <rect fill="#0C0E13" height="22" width="22" x="10" y="68"></rect>
-                          <rect fill="#FFFFFF" height="14" width="14" x="14" y="72"></rect>
-                          <rect fill="#0C0E13" height="8" width="8" x="17" y="75"></rect>
-                          <rect fill="#0C0E13" height="6" width="6" x="36" y="12"></rect>
-                          <rect fill="#0C0E13" height="4" width="16" x="46" y="12"></rect>
-                          <rect fill="#0C0E13" height="10" width="10" x="36" y="22"></rect>
-                        </svg>
-                      </div>
-                      <span className="mt-2 font-label-code text-label-code text-on-surface tracking-wider font-bold">PASS-ID: 992-VIP</span>
-                    </div>
+                    <span className="font-display-hero-mobile text-display-hero-mobile text-primary font-bold tracking-tight">#{state.ventaCreada?.idVenta ?? '—'}</span>
                   </div>
                 </div>
               </div>
@@ -247,25 +208,21 @@ export const ProcesoCompra = () => {
                   <span className="material-symbols-outlined text-primary text-[24px]">send_to_mobile</span>
                   <h3 className="font-headline-md text-headline-md text-on-surface">Opciones de Entrega</h3>
                 </div>
-                <button className="h-touch-target-kiosk w-full p-space-md rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-between group active:scale-[0.99] text-left">
+                <button onClick={() => window.print()} className="h-touch-target-kiosk w-full p-space-md rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-between group active:scale-[0.99] text-left">
                   <div className="flex items-center gap-space-md">
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                       <span className="material-symbols-outlined text-[26px]">print</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-label-lg text-label-lg text-on-surface font-bold">Imprimir Ticket Físico</span>
-                      <span className="font-body-sm text-body-sm text-on-surface-variant">En papel térmico de alta durabilidad</span>
+                      <span className="font-label-lg text-label-lg text-on-surface font-bold">Imprimir comprobante</span>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant">Abre el diálogo de impresión de tu navegador</span>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
                 </button>
               </div>
 
-              <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-space-md p-space-md rounded-xl bg-surface-container-low">
-                <div className="flex items-center gap-space-xs text-on-surface-variant">
-                  <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
-                  <span className="font-label-code text-label-code uppercase tracking-wider">Transacción Cifrada TLS 1.3</span>
-                </div>
+              <div className="w-full flex items-center justify-end p-space-md">
                 <button onClick={volverACartelera} className="h-touch-target-min px-space-lg rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary-container transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 flex items-center gap-space-xs">
                   <span className="material-symbols-outlined text-[20px]">home</span>
                   <span>Volver al Inicio</span>
@@ -415,30 +372,6 @@ export const ProcesoCompra = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {(state.estadoCompra === 'pago' || state.estadoCompra === 'seleccionando_candybar') && (
-              <div className="bg-surface-container p-space-md rounded-xl mb-space-md border border-surface-container-highest">
-                <div className="flex items-start justify-between gap-space-sm mb-space-xs">
-                  <div className="flex items-center gap-space-xs">
-                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                      <span className="material-symbols-outlined text-[20px]">fastfood</span>
-                    </div>
-                    <div>
-                      <h3 className="font-label-lg text-label-lg font-bold text-on-surface">Candy Bar Express</h3>
-                      <span className="font-label-code text-label-code text-secondary tracking-wide uppercase">Recomendado para 2</span>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={hasSnacks} onChange={toggleSnackExpress} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-surface after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between pl-10">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">Combo Popcorn Grande + 2 Bebidas</span>
-                  <span className="font-label-md text-label-md font-bold text-primary">+ 18.00 Bs</span>
-                </div>
               </div>
             )}
 
