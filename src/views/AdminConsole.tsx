@@ -9,15 +9,10 @@ import { AdminCartelera } from './admin/AdminCartelera';
 import { AdminSalas } from './admin/AdminSalas';
 import { AdminUsuarios } from './admin/AdminUsuarios';
 import { AdminPreciosPromos } from './admin/AdminPreciosPromos';
-
 import { AdminVoz } from './admin/AdminVoz';
-
-type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'voz';
-
 import { AdminDulceria } from './admin/AdminDulceria';
 
-type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'dulceria';
-
+type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'voz' | 'dulceria';
 
 const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'cartelera', icon: 'movie', label: 'Cartelera & Funciones' },
@@ -26,11 +21,8 @@ const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'auditoria', icon: 'security_update_good', label: 'Auditoría & Logs' },
   { tab: 'promos', icon: 'sell', label: 'Precios & Promos' },
   { tab: 'salas', icon: 'weekend', label: 'Configuración Salas' },
-
   { tab: 'voz', icon: 'auto_awesome', label: 'Asistente de Voz (RF18)' },
-
   { tab: 'dulceria', icon: 'local_cafe', label: 'Dulcería' },
-
 ];
 
 export const AdminConsole = () => {
