@@ -37,6 +37,14 @@ export const BottomHUD = ({ onVoiceMode }: BottomHUDProps) => {
           // llegar a este botón, así que confirmarla acá es válido.
           confirmacionNoReembolso: true,
           confirmacionVerbalCheck: false,
+          // CU09/RF20 (2026-09-16): mismo carrito de CandyBarSelection.tsx/"Candy Bar
+          // Express" — VentasService.crear valida cada idProducto server-side (nunca
+          // confía en el precio local) e inserta detalle_venta_dulceria en la misma
+          // transacción que las entradas.
+          dulceria: state.candyBarSeleccionado.map((item) => ({
+            idProducto: Number(item.id),
+            cantidad: item.cantidad,
+          })),
         },
         token,
       );

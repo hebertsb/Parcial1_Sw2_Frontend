@@ -8,6 +8,7 @@ import {
 import { Home } from './views/Home';
 import { Cartelera } from './views/Cartelera';
 import { ProcesoCompra } from './views/ProcesoCompra';
+import { MisCompras } from './views/MisCompras';
 import { Login } from './views/Login';
 import { AdminAccess } from './views/AdminAccess';
 import { AdminConsole } from './views/AdminConsole';
@@ -22,6 +23,14 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/cartelera" element={<Cartelera />} />
             <Route path="/compra" element={<ProcesoCompra />} />
+            <Route
+              path="/mis-compras"
+              element={
+                <RequireAuth>
+                  <MisCompras />
+                </RequireAuth>
+              }
+            />
             <Route path="/login" element={<Login />} />
           </Route>
           <Route path="/admin" element={<AdminAccess />} />

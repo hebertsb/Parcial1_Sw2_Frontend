@@ -10,6 +10,14 @@ export type InteractionMode = 'tactil' | 'hibrido' | 'voz';
 const PATHS_WITH_TOP_SWITCHER = ['/', '/cartelera', '/compra'];
 const PATHS_WITH_BOTTOM_HUD = ['/', '/cartelera', '/compra'];
 
+/**
+ * Pasos reales de `ProcesoCompra.tsx` en orden — "completado" queda afuera a
+ * propósito: una vez confirmada la venta no hay paso al que "volver" desde el nav,
+ * solo "Volver al Inicio" (ya existe en la propia pantalla de confirmación).
+ */
+const PASOS_COMPRA = ['seleccionando_asientos', 'seleccionando_candybar', 'pago'] as const;
+type PasoCompra = (typeof PASOS_COMPRA)[number];
+
 export const Layout = () => {
   const { state, dispatch } = useCine();
   const { usuario, logout } = useAuth();
@@ -49,6 +57,21 @@ export const Layout = () => {
 
   const irAModoVoz = () => requireAuth(() => navigate('/voz'));
 
+  /**
+   * Antes estos 3 botones tenían el mismo estilo que "Cartelera" (que sí navega)
+   * pero no tenían `onClick` — parecían clickeables sin serlo. Ahora sí navegan,
+   * pero solo hacia un paso ya alcanzado (nunca hacia adelante, eso lo sigue
+   * validando "Siguiente" en BottomHUD) — mismo criterio de progreso que ya usa
+   * `handleNextStep`/`handleVolver` ahí, no una regla nueva.
+   */
+  const indexPasoActual = PASOS_COMPRA.indexOf(state.estadoCompra as PasoCompra);
+  const pasoHabilitado = (paso: PasoCompra) =>
+    location.pathname === '/compra' && state.estadoCompra !== 'completado' && PASOS_COMPRA.indexOf(paso) <= indexPasoActual;
+  const irAPaso = (paso: PasoCompra) => {
+    if (!pasoHabilitado(paso)) return;
+    dispatch({ type: 'SET_ESTADO_COMPRA', payload: paso });
+  };
+
   const showTopModeSwitcher = PATHS_WITH_TOP_SWITCHER.includes(location.pathname);
   const showBottomHud = PATHS_WITH_BOTTOM_HUD.includes(location.pathname);
 
@@ -80,26 +103,68 @@ export const Layout = () => {
 
           <nav className="flex items-center gap-space-xs p-space-2xs bg-surface-container-low rounded-full">
             <button
+              onClick={goHome}
+              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
+            >
+              Inicio
+            </button>
+            <button
               onClick={navigateToCartelera}
               className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/cartelera' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               Cartelera
             </button>
-            <button
-              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/compra' && state.estadoCompra === 'seleccionando_asientos' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              Asientos
-            </button>
-            <button
-              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/compra' && state.estadoCompra === 'seleccionando_candybar' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              Candy Bar & VIP
-            </button>
-            <button
-              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/compra' && (state.estadoCompra === 'pago' || state.estadoCompra === 'completado') ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              Pago & Salida
-            </button>
+            {usuario && usuario.rol === 'cliente' && (
+              <button
+                onClick={() => navigate('/mis-compras')}
+                className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/mis-compras' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                Mis compras
+              </button>
+            )}
+            {location.pathname === '/compra' && (
+              <>
+                <button
+                  onClick={() => irAPaso('seleccionando_asientos')}
+                  disabled={!pasoHabilitado('seleccionando_asientos')}
+                  className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
+                    state.estadoCompra === 'seleccionando_asientos'
+                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
+                      : pasoHabilitado('seleccionando_asientos')
+                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
+                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                  }`}
+                >
+                  Asientos
+                </button>
+                <button
+                  onClick={() => irAPaso('seleccionando_candybar')}
+                  disabled={!pasoHabilitado('seleccionando_candybar')}
+                  className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
+                    state.estadoCompra === 'seleccionando_candybar'
+                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
+                      : pasoHabilitado('seleccionando_candybar')
+                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
+                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                  }`}
+                >
+                  Candy Bar & VIP
+                </button>
+                <button
+                  onClick={() => irAPaso('pago')}
+                  disabled={!pasoHabilitado('pago')}
+                  className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
+                    state.estadoCompra === 'pago' || state.estadoCompra === 'completado'
+                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
+                      : pasoHabilitado('pago')
+                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
+                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                  }`}
+                >
+                  Pago & Salida
+                </button>
+              </>
+            )}
           </nav>
 
           <div className="flex items-center gap-space-md">

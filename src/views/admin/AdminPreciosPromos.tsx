@@ -10,6 +10,7 @@ import type { Funcion } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import { PreciosPanel } from './PreciosPanel';
 import { PromocionesPanel } from './PromocionesPanel';
+import { leerEstadoSesion, guardarEstadoSesion } from '../../core/sessionState';
 
 type SubTab = 'precios' | 'promociones';
 
@@ -21,7 +22,7 @@ type SubTab = 'precios' | 'promociones';
  */
 export const AdminPreciosPromos = () => {
   const { token } = useAuth();
-  const [subTab, setSubTab] = useState<SubTab>('precios');
+  const [subTab, setSubTab] = useState<SubTab>(() => leerEstadoSesion('lumen_admin_precios_subtab', 'precios' as SubTab));
   const [precios, setPrecios] = useState<Precio[]>([]);
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [funciones, setFunciones] = useState<Funcion[]>([]);
@@ -51,6 +52,10 @@ export const AdminPreciosPromos = () => {
     void cargarTodo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    guardarEstadoSesion('lumen_admin_precios_subtab', subTab);
+  }, [subTab]);
 
   return (
     <div className="p-space-xl flex flex-col gap-space-lg">
