@@ -32,14 +32,25 @@ export async function sendVoiceMessage(
   audioBlob: Blob,
   rol: 'cliente' | 'administrador',
   sesionId: string,
+  token?: string | null,
 ): Promise<VoiceChatResult> {
   const form = new FormData();
   form.append('audio', audioBlob, 'grabacion.webm');
   form.append('rol', rol);
   form.append('sesion_id', sesionId);
 
+  // El agente reenvia este JWT (no usa credenciales propias) para llamar en
+  // nombre del usuario a endpoints del backend que exigen sesion real -- lo
+  // necesitan las tools de administrador (reportes, salas, promociones,
+  // precios) y la ejecucion final contra /ia-gateway/acciones (RF10, ver
+  // back_agent/app/gateway_client.py). Sin token, esas tools devuelven un
+  // error explicandolo en vez de fallar en silencio.
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${VOICE_API_URL}/voice-chat`, {
     method: 'POST',
+    headers,
     body: form,
   });
 
