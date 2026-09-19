@@ -7,9 +7,11 @@ import { ApiError } from '../../api/client';
 
 interface BottomHUDProps {
   onVoiceMode: () => void;
+  /** Modo de interaccion actual: en "Voz + UI Dinamica" este boton no debe llevar a Solo Voz (taparia la app que se esta usando). */
+  modo?: 'tactil' | 'hibrido' | 'voz';
 }
 
-export const BottomHUD = ({ onVoiceMode }: BottomHUDProps) => {
+export const BottomHUD = ({ onVoiceMode, modo = 'tactil' }: BottomHUDProps) => {
   const { state, dispatch } = useCine();
   const { token } = useAuth();
   const [confirmando, setConfirmando] = useState(false);
@@ -105,11 +107,19 @@ export const BottomHUD = ({ onVoiceMode }: BottomHUDProps) => {
             <span className="material-symbols-outlined text-primary text-[24px]">support_agent</span>
             <span className="hidden sm:inline">Llamar Asistente</span>
           </button>
-          <button onClick={onVoiceMode} className="h-touch-target-kiosk px-space-md rounded-xl bg-secondary-container/20 hover:bg-secondary-container/30 text-secondary flex items-center gap-space-xs font-label-lg text-label-lg transition-all active:scale-95">
-            <div className="w-3 h-3 rounded-full bg-secondary animate-ping"></div>
-            <span className="material-symbols-outlined text-[22px]">mic</span>
-            <span className="hidden md:inline">Cambiar a Modo Voz Lumina</span>
-          </button>
+          {modo === 'hibrido' ? (
+            <div data-testid="voz-ui-activa" className="h-touch-target-kiosk px-space-md rounded-xl bg-primary-container/20 text-primary flex items-center gap-space-xs font-label-lg text-label-lg">
+              <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+              <span className="material-symbols-outlined text-[22px]">graphic_eq</span>
+              <span className="hidden md:inline">Voz + UI activa: hablale a Lumen</span>
+            </div>
+          ) : (
+            <button onClick={onVoiceMode} className="h-touch-target-kiosk px-space-md rounded-xl bg-secondary-container/20 hover:bg-secondary-container/30 text-secondary flex items-center gap-space-xs font-label-lg text-label-lg transition-all active:scale-95">
+              <div className="w-3 h-3 rounded-full bg-secondary animate-ping"></div>
+              <span className="material-symbols-outlined text-[22px]">mic</span>
+              <span className="hidden md:inline">Cambiar a Modo Voz Lumina</span>
+            </button>
+          )}
         </div>
 
         {/* Center: Selection Status Counter Display */}

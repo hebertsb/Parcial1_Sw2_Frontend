@@ -243,7 +243,7 @@ export const Layout = () => {
         </div>
       </footer>
 
-      {showBottomHud && <BottomHUD onVoiceMode={irAModoVoz} />}
+      {showBottomHud && <BottomHUD onVoiceMode={irAModoVoz} modo={interactionMode} />}
     </div>
   );
 };

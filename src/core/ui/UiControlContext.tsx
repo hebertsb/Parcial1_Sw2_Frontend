@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 /**
  * Estado de interfaz que el agente de voz puede mover y que las pantallas leen: que pestaña del admin abrir,
@@ -13,6 +13,16 @@ export interface FiltroCartelera {
   n: number;
 }
 
+/** Lo que el agente esta señalando en la cartelera: la(s) pelicula(s) y, si ya se eligio, el horario. */
+export interface ResaltadoCartelera {
+  ids: number[];
+  idFuncion: number | null;
+  n: number;
+}
+
+/** Cuanto se queda resaltado (ms): lo justo para verlo mientras el agente habla y despues se apaga solo. */
+const DURACION_RESALTADO_MS = 12000;
+
 interface UiControl {
   solicitudAdminTab: { tab: string; n: number } | null;
   pedirAdminTab: (tab: string) => void;
@@ -20,6 +30,8 @@ interface UiControl {
   refrescar: (tab: string) => void;
   filtroCartelera: FiltroCartelera | null;
   filtrarCartelera: (filtro: { busqueda?: string | null; dia?: string | null }) => void;
+  resaltado: ResaltadoCartelera | null;
+  resaltarCartelera: (ids: number[], idFuncion?: number | null) => void;
 }
 
 const UiControlContext = createContext<UiControl | undefined>(undefined);
@@ -28,6 +40,8 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
   const [solicitudAdminTab, setSolicitudAdminTab] = useState<UiControl['solicitudAdminTab']>(null);
   const [refrescos, setRefrescos] = useState<Record<string, number>>({});
   const [filtroCartelera, setFiltroCartelera] = useState<FiltroCartelera | null>(null);
+  const [resaltado, setResaltado] = useState<ResaltadoCartelera | null>(null);
+  const temporizadorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pedirAdminTab = useCallback((tab: string) => setSolicitudAdminTab((prev) => ({ tab, n: (prev?.n ?? 0) + 1 })), []);
   const refrescar = useCallback((tab: string) => setRefrescos((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 })), []);
@@ -37,9 +51,16 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
+  const resaltarCartelera = useCallback((ids: number[], idFuncion: number | null = null) => {
+    setResaltado((prev) => ({ ids, idFuncion, n: (prev?.n ?? 0) + 1 }));
+    if (temporizadorRef.current) clearTimeout(temporizadorRef.current);
+    temporizadorRef.current = setTimeout(() => setResaltado(null), DURACION_RESALTADO_MS);
+  }, []);
+  useEffect(() => () => { if (temporizadorRef.current) clearTimeout(temporizadorRef.current); }, []);
+
   const value = useMemo(
-    () => ({ solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera }),
-    [solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera],
+    () => ({ solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera }),
+    [solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera],
   );
   return <UiControlContext.Provider value={value}>{children}</UiControlContext.Provider>;
 };

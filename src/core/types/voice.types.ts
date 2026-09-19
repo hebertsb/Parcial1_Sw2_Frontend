@@ -57,6 +57,8 @@ export type TipoVentana = 'confirmacion' | 'reporte' | 'ticket';
 export type UiAction =
   | { tipo: 'navegar'; destino: DestinoNavegacion }
   | { tipo: 'cartelera.filtrar'; busqueda?: string | null; dia?: string | null }
+  /** Lleva a la cartelera y RESALTA la(s) pelicula(s) y, si ya se eligio, el horario; espera `pausa_ms` para que se vea. */
+  | { tipo: 'cartelera.mostrar'; ids: number[]; idFuncion?: number; pausa_ms?: number; omitir_en_compra?: boolean }
   | { tipo: 'compra.seleccionar_funcion'; pelicula: Pelicula; funcion: Funcion; horario: string }
   | { tipo: 'compra.seleccionar_butacas'; butacas: Butaca[] }
   | { tipo: 'compra.candybar'; items: ItemCandyBarSeleccionado[] }

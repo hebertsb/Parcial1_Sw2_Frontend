@@ -33,13 +33,18 @@ const TABS_ADMIN: Partial<Record<DestinoNavegacion, string>> = {
 
 const RUTA_ADMIN = '/admin/console';
 
+const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
+
 /**
  * Traduce las acciones de interfaz que manda el agente (`ui_action`, ver back_agent/app/ui_actions.py) a lo que
  * la app ya sabe hacer: navegar con el router, mover el estado de la compra (`CineContext`), cambiar de pestaña del
- * admin, filtrar la cartelera y abrir/cerrar ventanas. Es DETERMINISTA: el modelo de lenguaje no decide la interfaz.
+ * admin, filtrar/resaltar la cartelera y abrir/cerrar ventanas. Es DETERMINISTA: el modelo de lenguaje no decide la interfaz.
+ *
+ * Las acciones de un turno se ejecutan EN ORDEN y en serie (una cola): algunas esperan (ej. dejar ver la película y el
+ * horario resaltados antes de pasar a los asientos), y un turno nuevo no debe pisar a uno que todavía se está mostrando.
  *
  * En "Solo Voz" no hay pantalla que mover: ahi solo se actualiza el estado de la compra (asi, si el usuario pasa
- * despues al modo tactil, ya encuentra su carrito) pero no se navega ni se abren ventanas.
+ * despues al modo tactil, ya encuentra su carrito) pero no se navega, no se resalta nada ni se abren ventanas.
  */
 export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): (acciones: UiAction[]) => void {
   const navigate = useNavigate();
@@ -51,9 +56,10 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
   // La ruta actual se lee por ref: el manejador se llama desde un evento del WebSocket, no desde un render.
   const rutaRef = useRef(location.pathname);
   rutaRef.current = location.pathname;
+  const colaRef = useRef<Promise<void>>(Promise.resolve());
 
-  return useCallback(
-    (acciones: UiAction[]) => {
+  const ejecutar = useCallback(
+    async (acciones: UiAction[]) => {
       const conPantalla = modoRef.current === 'hibrido';
       const irA = (ruta: string) => {
         if (conPantalla && rutaRef.current !== ruta) navigate(ruta);
@@ -99,6 +105,15 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
           case 'cartelera.filtrar':
             if (conPantalla) control.filtrarCartelera({ busqueda: accion.busqueda, dia: accion.dia });
             break;
+          case 'cartelera.mostrar':
+            if (!conPantalla) break;
+            // Si ya esta en los asientos y solo cambia la funcion, no se lo saca de ahi para mostrar la cartelera.
+            if (accion.omitir_en_compra && rutaRef.current === '/compra') break;
+            control.filtrarCartelera({ busqueda: null, dia: null }); // que ningun filtro anterior oculte lo que se va a mostrar
+            control.resaltarCartelera(accion.ids, accion.idFuncion ?? null);
+            irA('/cartelera');
+            if (accion.pausa_ms) await esperar(accion.pausa_ms); // se ve la eleccion un momento antes de seguir
+            break;
           case 'admin.abrir_tab':
             if (conPantalla) {
               control.pedirAdminTab(accion.tab);
@@ -120,5 +135,12 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
       }
     },
     [modoRef, navigate, dispatch, control, ventanas],
+  );
+
+  return useCallback(
+    (acciones: UiAction[]) => {
+      colaRef.current = colaRef.current.then(() => ejecutar(acciones)).catch((error) => console.error('[ui_action]', error));
+    },
+    [ejecutar],
   );
 }

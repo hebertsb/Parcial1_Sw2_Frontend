@@ -75,6 +75,8 @@ function verificar(nombre, ok, detalle = '') {
     console.log('\n== 2) Compra por voz: la app se mueve sola ==');
     await decir('Quiero dos entradas para Oppenheimer');
     await page.waitForURL('**/compra', { timeout: 10000 }).catch(() => {});
+    // La eleccion se deja ver ~1.3 s en la cartelera antes de pasar a los asientos: se espera el estado, no un tiempo fijo.
+    await page.waitForFunction(() => !!JSON.parse(sessionStorage.getItem('lumen_cine_state') || '{}').funcionSeleccionada, null, { timeout: 10000 }).catch(() => {});
     let cine = await estadoCine();
     verificar('navego a /compra (asientos)', page.url().includes('/compra'), page.url());
     verificar('eligio la pelicula Oppenheimer', cine.peliculaSeleccionada?.titulo === 'Oppenheimer', cine.peliculaSeleccionada?.titulo);
