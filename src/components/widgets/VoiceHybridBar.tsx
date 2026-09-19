@@ -32,7 +32,12 @@ const ETIQUETA_INTENCION: Record<string, string> = {
  * ocupar toda la pantalla, para que se vea bien en vez de amontonado en una
  * franja chica arriba.
  */
-export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
+/**
+ * `topOffset` (px): donde arranca la capa. Con 0 (default) ocupa toda la pantalla; el selector
+ * de modos de la pagina (TopModeSwitcher) pasa su borde inferior para que la capa quede debajo
+ * y sus botones (Modo Táctil / Voz + UI Dinámica / Solo Voz) sigan visibles y clickeables.
+ */
+export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void; topOffset?: number }) => {
   const { usuario, token } = useAuth();
   const sesionIdRef = useRef(crypto.randomUUID());
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -133,7 +138,10 @@ export const VoiceHybridBar = ({ onSalir }: { onSalir: () => void }) => {
   }[estado];
 
   return createPortal(
-    <div className="fixed inset-0 z-[95] bg-surface-container-lowest text-on-surface overflow-hidden select-none flex flex-col">
+    <div
+      className="fixed left-0 right-0 bottom-0 z-[95] bg-surface-container-lowest text-on-surface overflow-hidden select-none flex flex-col"
+      style={{ top: topOffset }}
+    >
       <audio
         ref={audioPlayerRef}
         hidden

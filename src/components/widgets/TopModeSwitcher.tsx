@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { VoiceHybridBar } from './VoiceHybridBar';
 
 interface TopModeSwitcherProps {
@@ -6,8 +7,27 @@ interface TopModeSwitcherProps {
 }
 
 export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) => {
+  const contenedorRef = useRef<HTMLDivElement>(null);
+  // La capa de "Voz + UI Dinámica" arranca justo debajo de este selector (no encima): si lo
+  // tapaba, sus propios botones dejaban de poder clickearse y no se podia pasar a "Solo Voz".
+  const [bordeInferior, setBordeInferior] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = contenedorRef.current;
+    if (!el) return;
+    const medir = () => setBordeInferior(Math.round(el.getBoundingClientRect().bottom));
+    medir();
+    const observer = new ResizeObserver(medir);
+    observer.observe(el);
+    window.addEventListener('resize', medir);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', medir);
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col w-full z-20 sticky top-20 bg-surface-container-lowest">
+    <div ref={contenedorRef} className="flex flex-col w-full z-20 sticky top-20 bg-surface-container-lowest">
       {/* Status Strip & Mode Toggle Anchor */}
       <div className="w-full px-space-lg py-space-sm flex flex-wrap items-center justify-between gap-space-md bg-surface-container-low/60 backdrop-blur-md">
         <div className="flex items-center gap-space-sm">
@@ -44,7 +64,7 @@ export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) =>
       </div>
 
       {/* Modo hibrido: pantalla de voz real (RF18), conectada de verdad a back_agent. */}
-      {mode === 'hibrido' && <VoiceHybridBar onSalir={() => onChangeMode('tactil')} />}
+      {mode === 'hibrido' && <VoiceHybridBar topOffset={bordeInferior} onSalir={() => onChangeMode('tactil')} />}
     </div>
   );
 };
