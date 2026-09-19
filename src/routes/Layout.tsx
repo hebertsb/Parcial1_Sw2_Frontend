@@ -93,16 +93,20 @@ export const Layout = () => {
                 <span className="font-label-code text-label-code text-secondary tracking-widest uppercase">AI Precision Kiosk</span>
               </div>
             </div>
-            <div className="hidden xl:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-lg bg-surface-container-low">
-              <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
-              <div className="flex flex-col">
-                <span className="font-label-code text-label-code text-on-surface-variant uppercase">Sala Asignada</span>
-                <span className="font-label-md text-label-md text-on-surface font-bold">
-                  {state.salaSeleccionada?.nombre ?? 'Sin asignar'}
-                  {state.salaSeleccionada?.tipo ? ` • ${state.salaSeleccionada.tipo}` : ''}
-                </span>
+            {/* La sala de la función elegida: solo aparece cuando ya hay una (antes decía "Sin asignar" todo el tiempo) y solo en
+                pantallas anchas: en las chicas se partía en 4 líneas, y la sala ya figura en el resumen de la compra. */}
+            {state.salaSeleccionada && (
+              <div data-testid="sala-asignada" className="hidden 2xl:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-lg bg-surface-container-low whitespace-nowrap">
+                <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
+                <div className="flex flex-col">
+                  <span className="font-label-code text-label-code text-on-surface-variant uppercase">Sala Asignada</span>
+                  <span className="font-label-md text-label-md text-on-surface font-bold">
+                    {state.salaSeleccionada.nombre}
+                    {state.salaSeleccionada.tipo ? ` • ${state.salaSeleccionada.tipo}` : ''}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <nav className="flex items-center gap-space-xs p-space-2xs bg-surface-container-low rounded-full">

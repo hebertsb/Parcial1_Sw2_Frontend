@@ -89,7 +89,9 @@ function verificar(nombre, ok, detalle = '') {
   verificar('el pie de pagina lleva el año real', (await page.locator('footer').innerText()).includes(`© ${new Date().getFullYear()}`));
   const estadoTactil = await textoDe('estado-conexion');
   verificar('en Táctil NO dice "Mic activo": el micrófono está apagado', !/mic activo/i.test(estadoTactil) && /mic apagado/i.test(estadoTactil), estadoTactil.replace(/\s+/g, ' '));
-  verificar('en Táctil no hay latencia ni "pipeline WebSocket activo" (no hay conexion de voz)', (await page.getByTestId('latencia-voz').count()) === 0 && !/pipeline/i.test(await textoDe('pipeline-estado')));
+  verificar('en Táctil no hay latencia ni "pipeline WebSocket activo" (no hay conexion de voz): la cabecera queda limpia', (await page.getByTestId('latencia-voz').count()) === 0 && (await page.getByTestId('pipeline-estado').count()) === 0);
+  verificar('no aparece el rotulo "RF18" en el selector de modo', !/RF18/i.test(await textoDe('mode-switcher')));
+  verificar('sin funcion elegida no hay "Sala asignada: Sin asignar" (solo aparece cuando hay una sala)', (await page.getByTestId('sala-asignada').count()) === 0 && !/sin asignar/i.test(await pantalla()));
 
   console.log('\n== 1) Entro a "Voz + UI Dinámica" desde el INICIO ==');
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
@@ -107,7 +109,7 @@ function verificar(nombre, ok, detalle = '') {
   verificar('es UNA sola franja pegada al selector: sin huecos y de borde a borde', !!selector && !!panel && Math.abs(panel.y - (selector.y + selector.height)) <= 2 && panel.x <= 1 && panel.width >= ancho - 2, panel ? `x=${Math.round(panel.x)}, ancho=${Math.round(panel.width)} de ${ancho}` : '');
   verificar('no hay un panel flotante abajo (es uno solo, arriba)', (await page.getByTestId('voice-dock').count()) === 0);
   verificar('al pasar a voz el micrófono SE ACTIVA: la cabecera dice "Mic activo"', /mic activo/i.test(await textoDe('estado-conexion')), (await textoDe('estado-conexion')).replace(/\s+/g, ' '));
-  verificar('el titulo pasa a "Pipeline generativo WebSocket activo"', /pipeline generativo websocket activo/i.test(await textoDe('pipeline-estado')));
+  verificar('el titulo pasa a "Pipeline generativo WebSocket activo" (sin "RF18")', /pipeline generativo websocket activo/i.test(await textoDe('pipeline-estado')) && !/RF18/i.test(await textoDe('mode-switcher')));
   await page.waitForSelector('[data-testid="latencia-voz"]', { timeout: 12000 }).catch(() => {});
   const latencia = await textoDe('latencia-voz');
   const ms = Number((/Latencia: (\d+) ms/i.exec(latencia) || [])[1]);
@@ -149,6 +151,10 @@ function verificar(nombre, ok, detalle = '') {
   verificar('se ve el resaltado ANTES de saltar a los asientos', tPelicula !== undefined && tAsientos !== undefined && tPelicula < tAsientos && (tAsientos - tPelicula) >= 900, tPelicula !== undefined && tAsientos !== undefined ? `se ve ${tAsientos - tPelicula} ms antes de pasar` : '');
   const cine = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lumen_cine_state') || '{}'));
   verificar('despues quedo en los asientos con la funcion elegida', page.url().endsWith('/compra') && cine.peliculaSeleccionada?.titulo === PELICULA && !!cine.funcionSeleccionada?.idFuncion, `${cine.peliculaSeleccionada?.titulo} funcion ${cine.funcionSeleccionada?.idFuncion}`);
+  // El cuadro solo se dibuja en pantallas anchas (2xl): con este viewport de 1500 px esta en el DOM pero oculto, asi que se lee `textContent`.
+  await page.waitForSelector('[data-testid="sala-asignada"]', { state: 'attached', timeout: 15000 }).catch(() => {});
+  const salaTexto = ((await page.getByTestId('sala-asignada').textContent().catch(() => '')) || '').replace(/\s+/g, ' ');
+  verificar('ya con la funcion elegida aparece "Sala asignada" con la sala real', /sala asignada/i.test(salaTexto) && !/sin asignar/i.test(salaTexto) && /sala/i.test(salaTexto.replace(/sala asignada/i, '')), salaTexto);
   verificar('ahora SI hay barra inferior (hay compra en curso) y es solo el resumen y el boton de avanzar', (await page.getByTestId('barra-compra').count()) === 1 && (await page.getByTestId('barra-compra').innerText()).includes('Ir al Candy Bar') && (await page.getByText('Llamar Asistente').count()) === 0 && (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0);
   await page.screenshot({ path: 'dv4_asientos.png' });
 
@@ -218,7 +224,7 @@ function verificar(nombre, ok, detalle = '') {
   await page.getByRole('button', { name: /Modo Táctil/ }).click();
   await page.waitForTimeout(500);
   const estadoFinal = await textoDe('estado-conexion');
-  verificar('al volver a Táctil el micrófono figura apagado y desaparecen la latencia y el pipeline activo', /mic apagado/i.test(estadoFinal) && !/mic activo/i.test(estadoFinal) && (await page.getByTestId('latencia-voz').count()) === 0 && !/pipeline/i.test(await textoDe('pipeline-estado')), estadoFinal.replace(/\s+/g, ' '));
+  verificar('al volver a Táctil el micrófono figura apagado y desaparecen la latencia y el pipeline activo', /mic apagado/i.test(estadoFinal) && !/mic activo/i.test(estadoFinal) && (await page.getByTestId('latencia-voz').count()) === 0 && (await page.getByTestId('pipeline-estado').count()) === 0, estadoFinal.replace(/\s+/g, ' '));
 
   console.log('\nerrores de la pagina:', errores.length ? errores : 'ninguno');
   verificar('sin errores en consola', errores.length === 0);
