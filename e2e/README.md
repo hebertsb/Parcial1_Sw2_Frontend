@@ -21,6 +21,8 @@ Variables opcionales para todos: `BASE_URL` (`http://localhost:3000`), `BACKEND_
 docker exec back_agent python tests/manual/generar_wav.py "Qué películas hay en cartelera" tests/manual/out/cartelera.wav
 # dos frases (la segunda cae mientras el agente todavía habla: prueba la interrupción)
 docker exec back_agent python tests/manual/generar_wav.py "Qué películas hay en cartelera||Espera, no quiero eso." tests/manual/out/barge.wav
+# la compra entera (4 frases, ~9 s entre una y otra)
+docker exec back_agent python tests/manual/generar_wav.py "Quiero dos entradas para Oppenheimer||Los asientos del medio, juntos||Agregame un pochoclo grande||Listo, quiero pagar" tests/manual/out/compra.wav
 # un WAV de silencio (para los scripts que hablan por el canal de texto: sin esto el micrófono falso mete un pitido
 # que el detector de voz toma por una frase)
 python -c "import wave;w=wave.open('silencio.wav','wb');w.setnchannels(1);w.setsampwidth(2);w.setframerate(16000);w.writeframes(b'\0\0'*16000*120)"
@@ -32,10 +34,12 @@ python -c "import wave;w=wave.open('silencio.wav','wb');w.setnchannels(1);w.sets
 |---|---|
 | `voz-continua.cjs` | **Audio real por el micrófono falso**: el agente entiende la frase, contesta y el navegador reproduce el audio. `MODO=barge` con `barge.wav`: hablarle encima lo corta y la segunda frase se procesa. `PANTALLA="Solo Voz"` o `"Voz + UI"`. |
 | `ui-dinamica.cjs` | La **app real se mueve** con la conversación: compra completa (función, asientos reales, dulcería, resumen con el aviso de no reembolso, ventana flotante arrastrable). Con `ROL=administrador NOMBRE="Admin Lumen"`: ventana de reporte y confirmación de alta de película. **No confirma nada**: cancela en la ventana, así no escribe en la base compartida. |
+| `compra-hablada.cjs` | **La compra entera hablada** (4 frases por el micrófono falso: película, asientos, dulcería, pagar) y el estado final de la app: butacas reales, dulcería, resumen con aviso de no reembolso y ventana de confirmación abierta. No confirma. Es la prueba más cercana a la demo. |
 | `entradas-voz.cjs` | Los otros caminos a la voz: portal del Home, salir de Solo Voz, pasar de Voz + UI a Solo Voz sin cortar la sesión, cerrar el dock, y que sin sesión pida login. |
 
 ```bash
 WAV=/ruta/cartelera.wav node e2e/voz-continua.cjs
+WAV=/ruta/compra.wav node e2e/compra-hablada.cjs
 SILENCIO_WAV=/ruta/silencio.wav node e2e/ui-dinamica.cjs
 SILENCIO_WAV=/ruta/silencio.wav ROL=administrador NOMBRE="Admin Lumen" node e2e/ui-dinamica.cjs
 SILENCIO_WAV=/ruta/silencio.wav node e2e/entradas-voz.cjs
