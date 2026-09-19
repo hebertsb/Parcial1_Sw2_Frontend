@@ -1,4 +1,10 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
+// El frontend corre en el puerto 3000 (único origen autorizado en el cliente OAuth de Google), así que el backend NestJS usa el 3333
+// (docker-compose y Backend/.env.example). Sin un .env.local el respaldo tiene que ser ese: con el 3000 el frontend se llamaría a sí mismo.
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333/api';
+
+if (import.meta.env.DEV && typeof window !== 'undefined' && new URL(API_URL, window.location.href).origin === window.location.origin) {
+  console.error(`[api] VITE_API_URL (${API_URL}) apunta al propio frontend: el backend corre en el puerto 3333. Revisá tu .env.local (ver .env.example).`);
+}
 
 export class ApiError extends Error {
   constructor(

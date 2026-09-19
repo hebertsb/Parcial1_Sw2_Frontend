@@ -27,7 +27,23 @@ no-reembolso (RF03) está fija en `true` en vez de un checkbox real.
 
 ```bash
 npm install
+cp .env.example .env.local      # en Windows (cmd): copy .env.example .env.local
 npm run dev
 ```
 
-Abre en `http://localhost:3000`.
+Abre en `http://localhost:3000`. Ese puerto es fijo: es el único origen autorizado en el cliente OAuth de Google.
+
+### Puertos y variables
+
+| Servicio | Puerto | Cómo se apunta desde el frontend |
+|---|---|---|
+| Frontend (Vite) | **3000** | — (no se puede cambiar por el login con Google) |
+| Backend NestJS | **3333** | `VITE_API_URL=http://localhost:3333/api` (es también el valor por defecto) |
+| Agente de voz (FastAPI) | 8000 | `VITE_VOICE_API_URL=http://localhost:8000` |
+
+- El backend tiene que estar en el **3333**: con docker compose ya viene así; si lo corrés a mano, poné `PORT=3333` en el `.env` del backend
+  (sin `PORT` arranca en el 3000 y choca con Vite).
+- `VITE_API_URL` **nunca** debe ser el 3000: ese es el propio frontend y todas las llamadas de datos fallarían. En modo desarrollo la consola
+  del navegador avisa si pasa.
+- En `.env.local` también van `VITE_GOOGLE_CLIENT_ID` (login con Google) y las de Cloudinary (subir portadas de películas y productos).
+  `.env.local` no se sube a git: cada integrante tiene el suyo.
