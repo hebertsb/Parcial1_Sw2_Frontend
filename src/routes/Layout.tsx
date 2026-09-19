@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { BottomHUD } from '../components/widgets/BottomHUD';
 import { TopModeSwitcher } from '../components/widgets/TopModeSwitcher';
+import { useVozSesion, type ModoInteraccion } from '../core/voice/VoiceSessionProvider';
 
-export type InteractionMode = 'tactil' | 'hibrido' | 'voz';
+export type InteractionMode = ModoInteraccion;
 
 const PATHS_WITH_TOP_SWITCHER = ['/', '/cartelera', '/compra'];
 const PATHS_WITH_BOTTOM_HUD = ['/', '/cartelera', '/compra'];
@@ -23,7 +23,8 @@ export const Layout = () => {
   const { usuario, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [interactionMode, setInteractionMode] = useState<InteractionMode>('tactil');
+  // El modo lo tiene el proveedor de voz (no este componente): asi la conversacion no se corta al navegar.
+  const { modo: interactionMode, setModo } = useVozSesion();
 
   const goHome = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
@@ -46,16 +47,20 @@ export const Layout = () => {
 
   const cambiarModoInteraccion = (m: InteractionMode) => {
     if (m === 'tactil') {
-      setInteractionMode(m);
+      setModo(m);
       return;
     }
     requireAuth(() => {
-      setInteractionMode(m);
+      setModo(m);
       if (m === 'voz') navigate('/voz');
     });
   };
 
-  const irAModoVoz = () => requireAuth(() => navigate('/voz'));
+  const irAModoVoz = () =>
+    requireAuth(() => {
+      setModo('voz');
+      navigate('/voz');
+    });
 
   /**
    * Antes estos 3 botones tenían el mismo estilo que "Cartelera" (que sí navega)

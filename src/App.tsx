@@ -13,44 +13,54 @@ import { Login } from './views/Login';
 import { AdminAccess } from './views/AdminAccess';
 import { AdminConsole } from './views/AdminConsole';
 import { VoiceAgent } from './views/VoiceAgent';
+import { UiControlProvider } from './core/ui/UiControlContext';
+import { VentanasProvider } from './core/ui/VentanasContext';
+import { VoiceSessionProvider } from './core/voice/VoiceSessionProvider';
 
 export default function App() {
   return (
     <BrowserRouter>
       <CineProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/cartelera" element={<Cartelera />} />
-            <Route path="/compra" element={<ProcesoCompra />} />
-            <Route
-              path="/mis-compras"
-              element={
-                <RequireAuth>
-                  <MisCompras />
-                </RequireAuth>
-              }
-            />
-            <Route path="/login" element={<Login />} />
-          </Route>
-          <Route path="/admin" element={<AdminAccess />} />
-          <Route
-            path="/admin/console"
-            element={
-              <RequireAdmin>
-                <AdminConsole />
-              </RequireAdmin>
-            }
-          />
-          <Route
-            path="/voz"
-            element={
-              <RequireAuth>
-                <VoiceAgent />
-              </RequireAuth>
-            }
-          />
-        </Routes>
+        {/* La conversacion de voz vive arriba de las rutas: no se corta al navegar y puede mover la app real. */}
+        <UiControlProvider>
+          <VentanasProvider>
+            <VoiceSessionProvider>
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/cartelera" element={<Cartelera />} />
+                  <Route path="/compra" element={<ProcesoCompra />} />
+                  <Route
+                    path="/mis-compras"
+                    element={
+                      <RequireAuth>
+                        <MisCompras />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route path="/login" element={<Login />} />
+                </Route>
+                <Route path="/admin" element={<AdminAccess />} />
+                <Route
+                  path="/admin/console"
+                  element={
+                    <RequireAdmin>
+                      <AdminConsole />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/voz"
+                  element={
+                    <RequireAuth>
+                      <VoiceAgent />
+                    </RequireAuth>
+                  }
+                />
+              </Routes>
+            </VoiceSessionProvider>
+          </VentanasProvider>
+        </UiControlProvider>
       </CineProvider>
     </BrowserRouter>
   );

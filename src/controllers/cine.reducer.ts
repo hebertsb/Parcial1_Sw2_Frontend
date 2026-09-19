@@ -33,7 +33,11 @@ export type CineAction =
   | { type: 'SET_CARGANDO_DISPONIBILIDAD'; payload: boolean }
   | { type: 'SET_PRECIO_UNITARIO'; payload: string | null }
   | { type: 'TOGGLE_BUTACA'; payload: Butaca }
+  /** Reemplaza TODA la seleccion de butacas (lo usa el agente de voz: elige un grupo de asientos de una vez). */
+  | { type: 'SET_BUTACAS'; payload: Butaca[] }
   | { type: 'ACTUALIZAR_CANDYBAR'; payload: ItemCandyBarSeleccionado }
+  /** Reemplaza TODO el carrito de dulceria (lo usa el agente de voz). */
+  | { type: 'SET_CANDYBAR'; payload: ItemCandyBarSeleccionado[] }
   | { type: 'SET_ESTADO_COMPRA'; payload: EstadoCompra }
   | { type: 'SET_VENTA_CREADA'; payload: Venta }
   | { type: 'RESETEAR_COMPRA' };
@@ -89,6 +93,10 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
           ? state.butacasSeleccionadas.filter(b => b.id !== action.payload.id)
           : [...state.butacasSeleccionadas, action.payload]
       };
+    case 'SET_BUTACAS':
+      return { ...state, butacasSeleccionadas: action.payload };
+    case 'SET_CANDYBAR':
+      return { ...state, candyBarSeleccionado: action.payload };
     case 'ACTUALIZAR_CANDYBAR':
       const existingItem = state.candyBarSeleccionado.find(i => i.id === action.payload.id);
       let updatedCandyBar = [...state.candyBarSeleccionado];

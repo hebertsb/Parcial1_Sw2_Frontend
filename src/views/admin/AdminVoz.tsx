@@ -1,23 +1,15 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VoiceHybridBar } from '../../components/widgets/VoiceHybridBar';
-
-type ModoVoz = 'elegir' | 'hibrido';
+import { useVozSesion } from '../../core/voice/VoiceSessionProvider';
 
 /**
- * CU03-CU07 por voz para el administrador (RF18). VoiceHybridBar ya renderiza
- * pantalla completa via portal (ver el propio componente), asi que alcanza
- * con montarlo cuando se elige "Voz + UI Dinámica" -- no hace falta que esta
- * vista tenga su propio layout especial. "Solo Voz" reusa la pantalla que ya
- * existe en /voz (misma tool, mismo rol de la sesión) en vez de duplicarla.
+ * CU03-CU07 por voz para el administrador (RF18). "Voz + UI Dinámica" abre el asistente flotante SOBRE la consola: el
+ * agente cambia de pestaña, recarga las tablas y muestra el detalle de lo que va a aplicar en una ventana, sin cubrir
+ * la pantalla. "Solo Voz" reusa la pantalla que ya existe en /voz (misma sesión, mismo rol).
  */
 export const AdminVoz = ({ onSalir }: { onSalir: () => void }) => {
   const navigate = useNavigate();
-  const [modo, setModo] = useState<ModoVoz>('elegir');
-
-  if (modo === 'hibrido') {
-    return <VoiceHybridBar onSalir={() => setModo('elegir')} />;
-  }
+  const { modo, setModo } = useVozSesion();
+  const activo = modo === 'hibrido';
 
   return (
     <div className="p-space-xl flex flex-col gap-space-xl">
@@ -31,13 +23,13 @@ export const AdminVoz = ({ onSalir }: { onSalir: () => void }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-lg max-w-3xl">
         <button
-          onClick={() => setModo('hibrido')}
-          className="flex flex-col items-start gap-space-sm p-space-lg rounded-2xl bg-surface-container hover:bg-surface-container-high transition-colors text-left shadow-md"
+          onClick={() => setModo(activo ? 'tactil' : 'hibrido')}
+          className={`flex flex-col items-start gap-space-sm p-space-lg rounded-2xl transition-colors text-left shadow-md ${activo ? 'bg-primary-container/25 ring-2 ring-primary' : 'bg-surface-container hover:bg-surface-container-high'}`}
         >
           <span className="material-symbols-outlined text-primary text-[32px]">auto_awesome</span>
-          <span className="font-headline-sm text-headline-sm text-on-surface">Voz + UI Dinámica</span>
+          <span className="font-headline-sm text-headline-sm text-on-surface">{activo ? 'Asistente activo — tocá para apagarlo' : 'Voz + UI Dinámica'}</span>
           <span className="font-body-sm text-body-sm text-on-surface-variant">
-            Pantalla completa: hablás y los resultados (reportes, cartelera, confirmaciones) se muestran en tarjetas.
+            El asistente queda flotando sobre la consola: hablás y la pantalla se mueve sola (pestañas, tablas y ventanas de confirmación).
           </span>
         </button>
 

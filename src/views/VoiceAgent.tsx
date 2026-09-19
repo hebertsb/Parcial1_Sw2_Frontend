@@ -2,15 +2,17 @@ import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'r
 import { useNavigate } from 'react-router-dom';
 import { useCine } from '../controllers/CineContext';
 import { useAuth } from '../controllers/AuthContext';
-import { useVoiceSession } from '../core/voice/useVoiceSession';
+import { useVozSesion } from '../core/voice/VoiceSessionProvider';
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 export const VoiceAgent = () => {
   const navigate = useNavigate();
   const { state: cineState } = useCine();
-  const { usuario, token } = useAuth();
+  const { usuario } = useAuth();
+  const { voz: sesion, setModo } = useVozSesion();
   const onClose = () => {
+    setModo('tactil');
     if (usuario?.rol === 'administrador') {
       navigate('/admin/console');
       return;
@@ -18,15 +20,11 @@ export const VoiceAgent = () => {
     navigate(cineState.peliculaSeleccionada ? '/compra' : '/cartelera');
   };
 
-  // Un solo id para toda esta sesion de voz (se recrea si se desmonta la
-  // pantalla, ej. al volver a entrar en modo voz) — agrupa los turnos de
-  // una misma conversacion para cuando el orquestador tenga historial.
-  const sesionIdRef = useRef(crypto.randomUUID());
-
-  // Conversacion continua: el microfono queda abierto y el servidor detecta solo cuando terminas
-  // de hablar (sin botones de grabar/enviar); podes interrumpir al agente hablando encima.
-  const sesion = useVoiceSession({ rol: usuario?.rol ?? 'cliente', token, sesionId: sesionIdRef.current });
-  const { iniciar } = sesion;
+  // La conversacion es del proveedor (core/voice/VoiceSessionProvider.tsx): esta pantalla solo la muestra. Entrar
+  // aca (tambien por URL) pone el modo "Solo Voz", que es lo que abre el microfono.
+  useEffect(() => {
+    setModo('voz');
+  }, [setModo]);
   const isMuted = sesion.silenciado;
   const transcript = sesion.transcript;
   const replyText = sesion.resultado?.replyText ?? '';
@@ -78,11 +76,6 @@ export const VoiceAgent = () => {
       if (holdTimer) clearInterval(holdTimer);
     };
   }, [holdProgress]);
-
-  // Al entrar a la pantalla la conversacion arranca sola (ya hubo un clic del usuario para llegar aca).
-  useEffect(() => {
-    void iniciar();
-  }, [iniciar]);
 
   // El orbe "respira" con la voz del usuario (lee el nivel del microfono sin re-renderizar React).
   useEffect(() => {

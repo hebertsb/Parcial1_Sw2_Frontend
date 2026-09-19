@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
+import { useUiControl } from '../core/ui/UiControlContext';
 import { CarteleraFiltros } from '../components/widgets/CarteleraFiltros';
 import { CarteleraGrid } from '../components/widgets/CarteleraGrid';
 import { CarteleraPromos } from '../components/widgets/CarteleraPromos';
@@ -16,6 +17,12 @@ export const Cartelera = () => {
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Filtro que puede pedir el agente de voz ("mostrame las de Spider-Man"); el dia tambien se sigue eligiendo a mano.
+  const { filtroCartelera, filtrarCartelera } = useUiControl();
+  const busqueda = filtroCartelera?.busqueda?.toLowerCase() ?? null;
+  useEffect(() => {
+    if (filtroCartelera) setDiaSeleccionado(filtroCartelera.dia);
+  }, [filtroCartelera]);
 
   useEffect(() => {
     // GET /peliculas y GET /funciones son rutas públicas (@Public() en el backend) —
@@ -70,6 +77,10 @@ export const Cartelera = () => {
       )
     : funcionesPorPelicula;
 
+  const peliculasVisibles = busqueda
+    ? state.peliculas.filter((p) => p.titulo.toLowerCase().includes(busqueda) || (p.genero ?? '').toLowerCase().includes(busqueda))
+    : state.peliculas;
+
   return (
     <div className="max-w-[1720px] mx-auto w-full px-space-xl lg:px-space-2xl py-space-xl flex-grow flex flex-col">
     <div className="flex-grow flex flex-col pb-32">
@@ -91,12 +102,22 @@ export const Cartelera = () => {
         </div>
         <div className="flex items-center gap-space-xs">
           <span className="font-label-code text-label-code text-on-surface-variant uppercase">
-            {state.peliculas.length > 0 ? `Mostrando ${state.peliculas.length} Títulos` : ''}
+            {state.peliculas.length > 0 ? `Mostrando ${peliculasVisibles.length} Títulos` : ''}
           </span>
+          {busqueda && (
+            <button
+              onClick={() => filtrarCartelera({ busqueda: null, dia: null })}
+              className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/30 text-secondary font-label-code text-label-code uppercase tracking-wider hover:bg-secondary-container/50 transition-colors"
+              title="Quitar el filtro"
+            >
+              Filtro: «{filtroCartelera?.busqueda}»
+              <span className="material-symbols-outlined text-[14px]">close</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <CarteleraGrid cargando={cargando} error={error} peliculas={state.peliculas} funcionesPorPelicula={funcionesFiltradasPorDia} />
+      <CarteleraGrid cargando={cargando} error={error} peliculas={peliculasVisibles} funcionesPorPelicula={funcionesFiltradasPorDia} />
 
       <CarteleraPromos />
     </div>

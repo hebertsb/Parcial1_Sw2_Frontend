@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { leerEstadoSesion, guardarEstadoSesion } from '../core/sessionState';
+import { useUiControl } from '../core/ui/UiControlContext';
 import { AdminReportes } from './admin/AdminReportes';
 import { AdminAuditoria } from './admin/AdminAuditoria';
 import { AdminCartelera } from './admin/AdminCartelera';
@@ -25,11 +26,22 @@ const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'dulceria', icon: 'local_cafe', label: 'Dulcería' },
 ];
 
+// Ultima peticion del agente que ya se aplico: sin esto, volver a entrar a la consola repetiria una peticion vieja.
+let ultimaPeticionAplicada = 0;
+
 export const AdminConsole = () => {
   const navigate = useNavigate();
   const { dispatch } = useCine();
   const { usuario, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>(() => leerEstadoSesion('lumen_admin_tab', 'reportes' as AdminTab));
+
+  // El agente de voz puede cambiar de pestaña ("mostrame los reportes") y recargarlas tras aplicar un cambio.
+  const { solicitudAdminTab, refrescos } = useUiControl();
+  useEffect(() => {
+    if (!solicitudAdminTab || solicitudAdminTab.n === ultimaPeticionAplicada) return;
+    ultimaPeticionAplicada = solicitudAdminTab.n;
+    if (NAV_ITEMS.some((item) => item.tab === solicitudAdminTab.tab)) setActiveTab(solicitudAdminTab.tab as AdminTab);
+  }, [solicitudAdminTab]);
 
   // Antes un F5 siempre volvía a "Reportes" (el valor inicial de `useState`),
   // aunque estuvieras en "Películas" o cualquier otra pestaña — ver sessionState.ts.
@@ -114,15 +126,15 @@ export const AdminConsole = () => {
         </header>
 
         <main className="w-full pt-20 bg-background flex-grow">
-          {activeTab === 'cartelera' && <AdminCartelera />}
-          {activeTab === 'reportes' && <AdminReportes />}
-          {activeTab === 'usuarios' && <AdminUsuarios />}
-          {activeTab === 'auditoria' && <AdminAuditoria />}
-          {activeTab === 'salas' && <AdminSalas />}
-          {activeTab === 'promos' && <AdminPreciosPromos />}
+          {activeTab === 'cartelera' && <AdminCartelera key={refrescos.cartelera ?? 0} />}
+          {activeTab === 'reportes' && <AdminReportes key={refrescos.reportes ?? 0} />}
+          {activeTab === 'usuarios' && <AdminUsuarios key={refrescos.usuarios ?? 0} />}
+          {activeTab === 'auditoria' && <AdminAuditoria key={refrescos.auditoria ?? 0} />}
+          {activeTab === 'salas' && <AdminSalas key={refrescos.salas ?? 0} />}
+          {activeTab === 'promos' && <AdminPreciosPromos key={refrescos.promos ?? 0} />}
           {activeTab === 'voz' && <AdminVoz onSalir={() => setActiveTab('reportes')} />}
 
-          {activeTab === 'dulceria' && <AdminDulceria />}
+          {activeTab === 'dulceria' && <AdminDulceria key={refrescos.dulceria ?? 0} />}
 
         </main>
       </div>

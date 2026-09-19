@@ -1,4 +1,4 @@
-import type { AccionPropuesta, VoiceResponseType } from '../types/voice.types';
+import type { AccionPropuesta, UiAction, VoiceResponseType } from '../types/voice.types';
 
 /**
  * Protocolo de la conversacion continua por WebSocket (`/ws/voz`).
@@ -16,6 +16,8 @@ export type EventoServidor =
   | { type: 'state'; value: EstadoServidor }
   | { type: 'vad'; hablando: boolean }
   | { type: 'transcript'; text: string }
+  /** Que debe hacer la pantalla; llega ANTES del `reply` para que la interfaz se mueva mientras el agente habla. */
+  | { type: 'ui_action'; acciones: UiAction[] }
   | { type: 'reply'; texto: string; tipo: VoiceResponseType; datos?: unknown; accion_propuesta?: AccionPropuesta }
   | { type: 'metrics'; stt_ms: number; llm_ms: number; primer_audio_ms: number }
   | { type: 'interrupted' }
