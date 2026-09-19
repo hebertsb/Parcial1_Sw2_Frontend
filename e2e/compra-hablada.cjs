@@ -59,7 +59,12 @@ const FRASES = Number(process.env.FRASES || 4);
   const cine = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lumen_cine_state') || '{}'));
   const ventana = await page.locator('[data-ventana="Confirmá tu compra"]').count();
   const resumen = ev.filter((e) => e.type === 'reply').slice(-1)[0];
+  // Latencia real: la del servicio de voz (medida en el navegador) y lo que tardo la ultima respuesta hablada (medido por el servidor).
+  const pill = await page.getByTestId('latencia-voz').innerText().catch(() => '');
+  const cabecera = await page.getByTestId('estado-conexion').innerText().catch(() => '');
   const verificaciones = [
+    ['la cabecera dice "Mic activo" mientras se habla', /mic activo/i.test(cabecera)],
+    ['muestra la latencia real y lo que tardo la respuesta hablada (medida por el servidor)', /Latencia: \d+ ms/i.test(pill) && /Respuesta: \d+,\d s/i.test(pill)],
     ['entendio las 4 frases', turnos.length >= FRASES],
     ['eligio Oppenheimer y una funcion real', cine.peliculaSeleccionada?.titulo === 'Oppenheimer' && !!cine.funcionSeleccionada?.idFuncion],
     ['selecciono 2 butacas reales', cine.butacasSeleccionadas?.length === 2 && cine.butacasSeleccionadas.every((b) => Number.isInteger(b.idAsiento))],

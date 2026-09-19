@@ -1,7 +1,7 @@
 import { ApiError } from './client';
 import type { AccionPropuesta, VoiceResponseType } from '../core/types/voice.types';
 
-const VOICE_API_URL = import.meta.env.VITE_VOICE_API_URL ?? 'http://localhost:8000';
+export const VOICE_API_URL: string = import.meta.env.VITE_VOICE_API_URL ?? 'http://localhost:8000';
 
 /** Conversacion continua (WebSocket). Por defecto es la misma direccion del servicio de voz con ws:// en vez de http://. */
 export const VOICE_WS_URL: string =

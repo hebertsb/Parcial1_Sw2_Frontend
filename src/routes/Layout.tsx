@@ -3,6 +3,8 @@ import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { BottomHUD } from '../components/widgets/BottomHUD';
 import { TopModeSwitcher } from '../components/widgets/TopModeSwitcher';
+import { EstadoConexion } from '../components/widgets/EstadoConexion';
+import { RelojSistema } from '../components/widgets/RelojSistema';
 import { VoiceStrip } from '../components/voice/VoiceStrip';
 import { useVozSesion, type ModoInteraccion } from '../core/voice/VoiceSessionProvider';
 
@@ -170,13 +172,11 @@ export const Layout = () => {
           </nav>
 
           <div className="flex items-center gap-space-md">
-            <div className="flex items-center gap-space-xs px-space-sm py-space-xs rounded-full bg-surface-container-high">
-              <div className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse shadow-[0_0_8px_rgba(86,229,169,0.8)]"></div>
-              <span className="font-label-code text-label-code text-tertiary uppercase tracking-wider hidden sm:inline">En línea • Mic Activo</span>
-            </div>
+            {/* El microfono figura activo solo cuando de verdad lo esta (modos de voz con la conversacion en marcha). */}
+            <EstadoConexion modo={interactionMode} voz={voz} />
             <div className="hidden lg:flex items-center gap-space-2xs px-space-sm py-space-xs rounded-lg bg-surface-container">
               <span className="material-symbols-outlined text-secondary text-[16px]">schedule</span>
-              <span className="font-label-code text-label-code text-on-surface font-bold tracking-widest">20:45</span>
+              <RelojSistema />
             </div>
             <div className="flex items-center px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface font-label-code text-label-code font-bold tracking-wider">
               ES
@@ -217,7 +217,7 @@ export const Layout = () => {
           {/* Selector de modo + panel de voz (solo en "Voz + UI Dinámica"): quedan juntos y fijos arriba mientras se navega. */}
           {(showTopModeSwitcher || interactionMode === 'hibrido') && (
             <div className="sticky top-20 z-20 bg-surface-container-lowest">
-              {showTopModeSwitcher && <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} />}
+              {showTopModeSwitcher && <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} voz={voz} />}
               {interactionMode === 'hibrido' && <VoiceStrip voz={voz} />}
             </div>
           )}
@@ -229,7 +229,7 @@ export const Layout = () => {
         <div className="w-full px-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md">
           <div className="flex items-center gap-space-md">
             <span className="font-headline-sm text-headline-sm text-primary">LUMEN</span>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">Sistemas de Kiosco Inteligente y Proyección Cinema NextGen © 2025. Todos los derechos reservados.</p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Sistemas de Kiosco Inteligente y Proyección Cinema NextGen © {new Date().getFullYear()}. Todos los derechos reservados.</p>
           </div>
           <div className="flex items-center gap-space-lg">
             <div className="flex items-center gap-space-xs text-error">

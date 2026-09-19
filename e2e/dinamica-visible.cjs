@@ -75,11 +75,21 @@ function verificar(nombre, ok, detalle = '') {
     console.log(`\n   USUARIO: ${frase}\n   LUMEN  : ${reply.texto.slice(0, 150)}`);
   };
   const pantalla = async () => (await page.evaluate(() => document.body.innerText));
+  // La hora que muestra la app tiene que ser la del sistema (este equipo): se compara con la de este proceso, con 1 minuto de margen.
+  const minutosDe = (t) => { const m = /(\d{1,2}):(\d{2})/.exec(t); return m ? Number(m[1]) * 60 + Number(m[2]) : NaN; };
+  const cercaDeAhora = (t, tolMin = 1) => { const n = new Date(); const d = Math.abs(minutosDe(t) - (n.getHours() * 60 + n.getMinutes())); return Math.min(d, 1440 - d) <= tolMin; };
+  const textoDe = async (id) => (await page.getByTestId(id).innerText().catch(() => ''));
 
   console.log('== 0) Sin compra en curso la pantalla queda limpia: el modo se cambia SOLO con el selector de arriba ==');
   await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
   verificar('no hay barra inferior (no hay compra en curso)', (await page.getByTestId('barra-compra').count()) === 0);
   verificar('no hay "Llamar Asistente" ni "Cambiar a Modo Voz Lumina" (el selector de arriba ya cambia de modo)', (await page.getByText('Llamar Asistente').count()) === 0 && (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0);
+  const relojTactil = await textoDe('reloj-sistema');
+  verificar('el reloj de la cabecera marca la hora REAL del sistema (no "20:45" fijo)', cercaDeAhora(relojTactil), `reloj: ${relojTactil} · sistema: ${new Date().toTimeString().slice(0, 5)}`);
+  verificar('el pie de pagina lleva el año real', (await page.locator('footer').innerText()).includes(`© ${new Date().getFullYear()}`));
+  const estadoTactil = await textoDe('estado-conexion');
+  verificar('en Táctil NO dice "Mic activo": el micrófono está apagado', !/mic activo/i.test(estadoTactil) && /mic apagado/i.test(estadoTactil), estadoTactil.replace(/\s+/g, ' '));
+  verificar('en Táctil no hay latencia ni "pipeline WebSocket activo" (no hay conexion de voz)', (await page.getByTestId('latencia-voz').count()) === 0 && !/pipeline/i.test(await textoDe('pipeline-estado')));
 
   console.log('\n== 1) Entro a "Voz + UI Dinámica" desde el INICIO ==');
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
@@ -96,6 +106,12 @@ function verificar(nombre, ok, detalle = '') {
   verificar('el panel de voz queda DEBAJO del selector de modo', !!selector && !!panel && panel.y >= selector.y + selector.height - 2, selector && panel ? `selector termina en y=${Math.round(selector.y + selector.height)}, panel empieza en y=${Math.round(panel.y)}` : '');
   verificar('es UNA sola franja pegada al selector: sin huecos y de borde a borde', !!selector && !!panel && Math.abs(panel.y - (selector.y + selector.height)) <= 2 && panel.x <= 1 && panel.width >= ancho - 2, panel ? `x=${Math.round(panel.x)}, ancho=${Math.round(panel.width)} de ${ancho}` : '');
   verificar('no hay un panel flotante abajo (es uno solo, arriba)', (await page.getByTestId('voice-dock').count()) === 0);
+  verificar('al pasar a voz el micrófono SE ACTIVA: la cabecera dice "Mic activo"', /mic activo/i.test(await textoDe('estado-conexion')), (await textoDe('estado-conexion')).replace(/\s+/g, ' '));
+  verificar('el titulo pasa a "Pipeline generativo WebSocket activo"', /pipeline generativo websocket activo/i.test(await textoDe('pipeline-estado')));
+  await page.waitForSelector('[data-testid="latencia-voz"]', { timeout: 12000 }).catch(() => {});
+  const latencia = await textoDe('latencia-voz');
+  const ms = Number((/Latencia: (\d+) ms/i.exec(latencia) || [])[1]);
+  verificar('muestra la latencia REAL medida hacia el agente', ms >= 1 && ms < 1000, latencia.replace(/\s+/g, ' '));
   verificar('recien abierto muestra "escuchando" y los textos en blanco', /Escucha/i.test(await page.getByTestId('strip-estado').innerText()) && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
   await page.screenshot({ path: 'dv1_inicio_con_asistente.png' });
 
@@ -108,6 +124,8 @@ function verificar(nombre, ok, detalle = '') {
   verificar('se ven las peliculas', llegaron, `${await page.locator('.movie-card').count()} tarjetas, ${Date.now() - tTarjetas} ms despues de navegar`);
   verificar('sigue el panel de voz arriba (no cambio a Solo Voz)', (await page.getByTestId('voice-strip').count()) === 1 && !/Canal de Voz Bidireccional/i.test(await pantalla()));
   verificar('mientras responde muestra lo que se le entendio y lo que contesta', (await page.getByTestId('strip-transcript').innerText()).includes('cartelera') && (await page.getByTestId('strip-respuesta').count()) === 1);
+  const tituloAgente = await textoDe('strip-agente');
+  verificar('el titulo del agente lleva la hora REAL de la respuesta', /\(voz • \d{2}:\d{2}:\d{2}\)/i.test(tituloAgente) && cercaDeAhora(tituloAgente), tituloAgente.replace(/\s+/g, ' '));
   await page.screenshot({ path: 'dv2_cartelera.png' });
   // Cuando el agente termina de hablar el panel vuelve solo a "escuchando": no se queda con la respuesta de la accion anterior.
   await page.waitForSelector('[data-testid="strip-respuesta-vacio"]', { timeout: 40000 }).catch(() => {});
@@ -185,6 +203,22 @@ function verificar(nombre, ok, detalle = '') {
   await page.screenshot({ path: 'dv7_error_de_turno.png' });
   await page.waitForSelector('[data-testid="strip-error"]', { state: 'detached', timeout: 8000 }).catch(() => {});
   verificar('pasado un momento el panel vuelve a "escuchando" y el error no queda pegado', (await page.getByTestId('strip-error').count()) === 0 && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
+
+  console.log('\n== 9) El estado del micrófono en la cabecera es real: pausar, reactivar y volver a Táctil ==');
+  await page.getByRole('button', { name: /Pausar el micrófono/ }).click();
+  await page.waitForTimeout(300);
+  verificar('al pausar el micrófono la cabecera dice "Mic pausado"', /mic pausado/i.test(await textoDe('estado-conexion')), (await textoDe('estado-conexion')).replace(/\s+/g, ' '));
+  await page.getByRole('button', { name: /Reactivar el micrófono/ }).click();
+  await page.waitForTimeout(300);
+  verificar('al reactivarlo vuelve a "Mic activo"', /mic activo/i.test(await textoDe('estado-conexion')));
+  // El servidor manda la latencia de la ultima respuesta en el evento `metrics` (solo en turnos hablados): se inyecta uno para ver como se muestra.
+  await page.evaluate(() => window.__ws.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'metrics', stt_ms: 300, llm_ms: 1800, primer_audio_ms: 2140 }) })));
+  await page.waitForTimeout(200);
+  verificar('la latencia de la ultima respuesta se muestra con el valor que mide el servidor', /Respuesta: 2,1 s/i.test(await textoDe('latencia-voz')), (await textoDe('latencia-voz')).replace(/\s+/g, ' '));
+  await page.getByRole('button', { name: /Modo Táctil/ }).click();
+  await page.waitForTimeout(500);
+  const estadoFinal = await textoDe('estado-conexion');
+  verificar('al volver a Táctil el micrófono figura apagado y desaparecen la latencia y el pipeline activo', /mic apagado/i.test(estadoFinal) && !/mic activo/i.test(estadoFinal) && (await page.getByTestId('latencia-voz').count()) === 0 && !/pipeline/i.test(await textoDe('pipeline-estado')), estadoFinal.replace(/\s+/g, ' '));
 
   console.log('\nerrores de la pagina:', errores.length ? errores : 'ninguno');
   verificar('sin errores en consola', errores.length === 0);

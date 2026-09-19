@@ -163,22 +163,25 @@ export const VoiceStrip = ({ voz }: VoiceStripProps) => {
         </div>
 
         {/* Lo que contesta el agente: tarjeta hundida en la misma franja */}
-        <div className="flex items-start gap-space-md lg:basis-7/12 min-w-0 h-24 rounded-2xl bg-surface-container-lowest/80 border border-surface-container-high/40 shadow-inner px-space-md py-space-sm">
+        <div className="flex items-start gap-space-md lg:basis-7/12 min-w-0 h-26 rounded-2xl bg-surface-container-lowest/80 border border-surface-container-high/40 shadow-inner px-space-md py-space-sm">
           <div className="w-11 h-11 shrink-0 rounded-xl bg-surface-container-high text-secondary flex items-center justify-center">
             <span className="material-symbols-outlined text-[24px]">smart_toy</span>
           </div>
           <div className="flex-1 min-w-0 h-full flex flex-col gap-space-2xs">
             <div className="flex items-center gap-space-xs shrink-0">
-              <span className="font-label-code text-label-code text-secondary uppercase tracking-wider truncate">Agente Lumen AI (voz)</span>
+              <span className="font-label-code text-label-code text-secondary uppercase tracking-wider truncate" data-testid="strip-agente">
+                Agente Lumen AI (voz{voz.turno.hora ? ` • ${voz.turno.hora}` : ''})
+              </span>
               {chip && <span className={`px-space-xs py-[1px] rounded-md font-label-code text-label-code ${chip.clase}`}>{chip.texto}</span>}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-hidden">
               {error ? (
-                <p className="font-body-sm text-body-sm text-error" data-testid="strip-error">
+                <p className="font-body-sm text-body-sm text-error line-clamp-3" data-testid="strip-error">
                   {error}
                 </p>
               ) : voz.turno.respuesta ? (
-                <p className="font-body-sm text-body-sm text-on-surface" data-testid="strip-respuesta">
+                // Tres lineas con "…" si es mas larga (ej. el resumen de pago): el texto completo va en la ventana y en el `title`.
+                <p className="font-body-sm text-body-sm text-on-surface line-clamp-3" data-testid="strip-respuesta" title={voz.turno.respuesta}>
                   {voz.turno.respuesta}
                 </p>
               ) : (

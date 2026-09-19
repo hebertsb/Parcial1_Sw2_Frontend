@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { VOICE_WS_URL } from '../../api/voice.api';
+import { VOICE_API_URL, VOICE_WS_URL } from '../../api/voice.api';
+import { formatearHora } from '../time/reloj';
 import { PlaybackQueue } from './playbackQueue';
 import {
   leerAudioDelServidor,
@@ -30,11 +31,16 @@ export interface OpcionesSesion {
 export interface TurnoVisible {
   transcript: string;
   respuesta: string;
+  /** Hora real (del sistema) en que llego la respuesta, "20:45:12"; null si todavia no hay respuesta. */
+  hora: string | null;
   /** Un fallo de ESTE turno (ej. "no pude procesar la frase"); los fallos de la conversacion van en `error`. */
   error: string | null;
 }
 
-const TURNO_VACIO: TurnoVisible = { transcript: '', respuesta: '', error: null };
+const TURNO_VACIO: TurnoVisible = { transcript: '', respuesta: '', hora: null, error: null };
+
+/** Cada cuanto se mide la latencia hacia el servicio de voz mientras hay conversacion (menos que el keep-alive de 5 s del servidor: se reusa la conexion). */
+const PERIODO_LATENCIA_MS = 4000;
 
 export interface SesionVoz {
   estado: EstadoConversacion;
@@ -51,6 +57,10 @@ export interface SesionVoz {
   resultado: ResultadoVoz | null;
   /** Lo que se muestra del intercambio actual; se limpia solo al terminar (ver `TurnoVisible`). */
   turno: TurnoVisible;
+  /** Latencia REAL (ms) de ida y vuelta al servicio de voz, medida cada pocos segundos; null si no hay conversacion o no respondio. */
+  latenciaMs: number | null;
+  /** Lo que tardo el ultimo turno hablado hasta que empezo a sonar la respuesta (ms), medido por el servidor; null si aun no hubo. */
+  ultimaRespuestaMs: number | null;
   error: string | null;
   /** Nivel del microfono (RMS 0..1), actualizado ~30 veces por segundo; se lee sin re-renderizar (requestAnimationFrame). */
   nivelMicRef: MutableRefObject<number>;
@@ -102,6 +112,8 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
   const [resultado, setResultado] = useState<ResultadoVoz | null>(null);
   const [turno, setTurno] = useState<TurnoVisible>(TURNO_VACIO);
   const [reconectando, setReconectando] = useState(false);
+  const [latencia, setLatencia] = useState<number | null>(null);
+  const [ultimaRespuestaMs, setUltimaRespuestaMs] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -203,7 +215,7 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
           transcriptRef.current = evento.text;
           setTranscript(evento.text);
           cancelarReinicioTurno();
-          setTurno({ transcript: evento.text, respuesta: '', error: null });
+          setTurno({ transcript: evento.text, respuesta: '', hora: null, error: null });
           break;
         case 'reply':
           setResultado({
@@ -213,7 +225,10 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
             datos: evento.datos ?? null,
             accionPropuesta: evento.accion_propuesta ?? null,
           });
-          setTurno((actual) => ({ ...actual, respuesta: evento.texto, error: null }));
+          setTurno((actual) => ({ ...actual, respuesta: evento.texto, hora: formatearHora(new Date(), true), error: null }));
+          break;
+        case 'metrics':
+          setUltimaRespuestaMs(evento.primer_audio_ms);
           break;
         case 'error':
           setError(evento.message);
@@ -294,6 +309,7 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     liberarAudio();
     setUsuarioHablando(false);
     setReconectando(false);
+    setUltimaRespuestaMs(null);
     limpiarTurno();
     cambiarEstado('apagada');
   }, [cambiarEstado, liberarAudio, limpiarTurno]);
@@ -400,10 +416,47 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
 
   const activa = estado !== 'apagada' && estado !== 'error';
 
+  // Latencia REAL hacia el servicio de voz: mientras hay conversacion se mide, cada pocos segundos, cuanto tarda una
+  // peticion de ida y vuelta (`no-cors`: solo interesa el tiempo, no la respuesta). Si no contesta, no se muestra nada.
+  const conversando = estado === 'escuchando' || estado === 'pensando' || estado === 'hablando';
+  useEffect(() => {
+    if (!conversando) return undefined;
+    let vivo = true;
+    const muestras: number[] = [];
+    const ping = () => fetch(`${VOICE_API_URL}/`, { mode: 'no-cors', cache: 'no-store' });
+    const medir = async () => {
+      const inicio = performance.now();
+      try {
+        await ping();
+        muestras.push(Math.max(1, Math.round(performance.now() - inicio)));
+        if (muestras.length > 3) muestras.shift();
+        // Mediana de las ultimas 3: un pedido suelto que tuvo que abrir conexion (~0,4 s en Windows/Docker) no dispara el numero.
+        const ordenadas = [...muestras].sort((a, b) => a - b);
+        if (vivo) setLatencia(ordenadas[Math.floor(ordenadas.length / 2)]);
+      } catch {
+        muestras.length = 0;
+        if (vivo) setLatencia(null);
+      }
+    };
+    // El primer pedido paga abrir la conexion: se hace y se descarta para no arrancar mostrando un valor inflado.
+    void ping()
+      .catch(() => undefined)
+      .then(() => {
+        if (vivo) void medir();
+      });
+    const id = setInterval(() => void medir(), PERIODO_LATENCIA_MS);
+    return () => {
+      vivo = false;
+      clearInterval(id);
+    };
+  }, [conversando]);
+
   return {
     estado,
     activa,
     reconectando,
+    latenciaMs: conversando ? latencia : null,
+    ultimaRespuestaMs,
     usuarioHablando,
     silenciado,
     transcript,

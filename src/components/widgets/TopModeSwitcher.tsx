@@ -1,6 +1,11 @@
+import type { SesionVoz } from '../../core/voice/useVoiceSession';
+import { formatearSegundos } from '../../core/time/reloj';
+
 interface TopModeSwitcherProps {
   mode: 'tactil' | 'hibrido' | 'voz';
   onChangeMode: (mode: 'tactil' | 'hibrido' | 'voz') => void;
+  /** La conversacion de voz: de ahi salen el estado de la conexion y las latencias que se muestran junto al selector. */
+  voz: SesionVoz;
 }
 
 /**
@@ -8,7 +13,9 @@ interface TopModeSwitcherProps {
  * de voz (VoiceStrip) aparece justo DEBAJO de este selector y la app real queda a la vista, que el agente va moviendo
  * segun lo que se le pide (ver routes/Layout.tsx: los dos comparten el mismo contenedor fijo).
  */
-export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) => {
+export const TopModeSwitcher = ({ mode, onChangeMode, voz }: TopModeSwitcherProps) => {
+  // "Pipeline WebSocket activo" solo cuando la conversacion esta realmente en marcha; si no, el titulo de siempre.
+  const conectado = mode === 'hibrido' && (voz.estado === 'escuchando' || voz.estado === 'pensando' || voz.estado === 'hablando');
   return (
     <div data-testid="mode-switcher" className="flex flex-col w-full bg-surface-container-lowest">
       {/* Status Strip & Mode Toggle Anchor */}
@@ -16,8 +23,17 @@ export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) =>
         <div className="flex items-center gap-space-sm">
           <div className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/20 text-secondary">
             <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
-            <span className="font-label-code text-label-code uppercase tracking-wider">RF18 • UI Generativa por Voz</span>
+            <span className="font-label-code text-label-code uppercase tracking-wider" data-testid="pipeline-estado">
+              RF18 • {conectado ? 'Pipeline generativo WebSocket activo' : 'UI Generativa por Voz'}
+            </span>
           </div>
+          {/* Numeros medidos de verdad: la latencia de ida y vuelta al agente y lo que tardo su ultima respuesta. */}
+          {conectado && voz.latenciaMs !== null && (
+            <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-wider" data-testid="latencia-voz">
+              • Latencia: {voz.latenciaMs} ms
+              {voz.ultimaRespuestaMs !== null && <> • Respuesta: {formatearSegundos(voz.ultimaRespuestaMs)}</>}
+            </span>
+          )}
         </div>
 
         {/* Toggle Mode Segmented Switch */}
