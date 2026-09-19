@@ -4,13 +4,13 @@ interface TopModeSwitcherProps {
 }
 
 /**
- * Selector de modo de interaccion. "Voz + UI Dinamica" ya no tapa la pantalla con una capa propia: al activarlo, el
- * asistente (VoiceDock + ventanas, ver core/voice/VoiceSessionProvider.tsx) aparece SOBRE la app real, que el agente
- * va moviendo segun lo que se le pide.
+ * Selector de modo de interaccion. "Voz + UI Dinamica" no tapa la pantalla con una capa propia: al activarlo, el panel
+ * de voz (VoiceStrip) aparece justo DEBAJO de este selector y la app real queda a la vista, que el agente va moviendo
+ * segun lo que se le pide (ver routes/Layout.tsx: los dos comparten el mismo contenedor fijo).
  */
 export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) => {
   return (
-    <div className="flex flex-col w-full z-20 sticky top-20 bg-surface-container-lowest">
+    <div className="flex flex-col w-full bg-surface-container-lowest">
       {/* Status Strip & Mode Toggle Anchor */}
       <div className="w-full px-space-lg py-space-sm flex flex-wrap items-center justify-between gap-space-md bg-surface-container-low/60 backdrop-blur-md">
         <div className="flex items-center gap-space-sm">

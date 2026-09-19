@@ -22,10 +22,26 @@ export interface OpcionesSesion {
   onEvento?: (evento: EventoServidor) => void;
 }
 
+/**
+ * Lo que se MUESTRA del intercambio en curso (panel de voz de "Voz + UI Dinamica"). A diferencia de `transcript` y
+ * `resultado` (que guardan lo ultimo que paso), esto vuelve a quedar vacio solo: cuando el agente termina de hablar y
+ * pasa un momento, el panel regresa a "escuchando" para la proxima instruccion en vez de quedarse con la respuesta vieja.
+ */
+export interface TurnoVisible {
+  transcript: string;
+  respuesta: string;
+  /** Un fallo de ESTE turno (ej. "no pude procesar la frase"); los fallos de la conversacion van en `error`. */
+  error: string | null;
+}
+
+const TURNO_VACIO: TurnoVisible = { transcript: '', respuesta: '', error: null };
+
 export interface SesionVoz {
   estado: EstadoConversacion;
   /** Hay una conversacion abierta (conectando o en curso). */
   activa: boolean;
+  /** Se cayo la conexion con el asistente y se esta reintentando (el microfono sigue abierto). */
+  reconectando: boolean;
   /** El servidor detecta que el usuario esta hablando en este momento. */
   usuarioHablando: boolean;
   silenciado: boolean;
@@ -33,6 +49,8 @@ export interface SesionVoz {
   transcript: string;
   /** El ultimo resultado (texto, tipo y datos para los widgets). */
   resultado: ResultadoVoz | null;
+  /** Lo que se muestra del intercambio actual; se limpia solo al terminar (ver `TurnoVisible`). */
+  turno: TurnoVisible;
   error: string | null;
   /** Nivel del microfono (RMS 0..1), actualizado ~30 veces por segundo; se lee sin re-renderizar (requestAnimationFrame). */
   nivelMicRef: MutableRefObject<number>;
@@ -46,7 +64,11 @@ export interface SesionVoz {
   enviarTexto: (texto: string) => void;
 }
 
-const REINTENTOS_MAX = 3;
+// Reconectar: el agente tarda ~15 s en volver a levantar (carga Whisper y Piper), asi que se insiste ese tiempo antes de rendirse.
+const REINTENTOS_MAX = 8;
+const ESPERA_REINTENTO_MAX_MS = 4000;
+/** Cuanto se deja ver la respuesta despues de que el agente termino de hablar, antes de volver a "escuchando". */
+const TIEMPO_LECTURA_MS = 3500;
 const FRAME_MUESTRAS = 512; // 32 ms a 16 kHz: coincide con la ventana del VAD del servidor
 const BUFFER_MAX_BYTES = 256 * 1024; // si la red no da abasto, se descarta audio en vez de acumular retraso
 
@@ -78,6 +100,8 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
   const [silenciado, setSilenciado] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [resultado, setResultado] = useState<ResultadoVoz | null>(null);
+  const [turno, setTurno] = useState<TurnoVisible>(TURNO_VACIO);
+  const [reconectando, setReconectando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -96,11 +120,33 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
   const transcriptRef = useRef('');
   const estadoRef = useRef<EstadoConversacion>('apagada');
   const temporizadorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reinicioTurnoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cambiarEstado = useCallback((nuevo: EstadoConversacion) => {
     estadoRef.current = nuevo;
     setEstado(nuevo);
   }, []);
+
+  const cancelarReinicioTurno = useCallback(() => {
+    if (reinicioTurnoRef.current) {
+      clearTimeout(reinicioTurnoRef.current);
+      reinicioTurnoRef.current = null;
+    }
+  }, []);
+
+  /** El agente termino: se deja leer la respuesta un momento y el panel vuelve solo a "escuchando". */
+  const programarReinicioTurno = useCallback(() => {
+    cancelarReinicioTurno();
+    reinicioTurnoRef.current = setTimeout(() => {
+      reinicioTurnoRef.current = null;
+      setTurno(TURNO_VACIO);
+    }, TIEMPO_LECTURA_MS);
+  }, [cancelarReinicioTurno]);
+
+  const limpiarTurno = useCallback(() => {
+    cancelarReinicioTurno();
+    setTurno(TURNO_VACIO);
+  }, [cancelarReinicioTurno]);
 
   const enviar = useCallback((mensaje: MensajeCliente) => {
     const ws = wsRef.current;
@@ -133,15 +179,22 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
         case 'ready':
           listoRef.current = true;
           intentosRef.current = 0;
+          setReconectando(false);
+          setError(null);
           cambiarEstado('escuchando');
           break;
         case 'state':
           cambiarEstado(evento.value);
+          // Mientras el agente piensa o habla se conserva lo que se muestra; al volver a escuchar empieza la cuenta para limpiarlo.
+          if (evento.value === 'escuchando') programarReinicioTurno();
+          else cancelarReinicioTurno();
           break;
         case 'vad':
           setUsuarioHablando(evento.hablando);
           // Habla encima del agente: se calla en el acto, sin esperar la ida y vuelta al servidor.
           if (evento.hablando && opcionesRef.current.bargeIn !== false) playbackRef.current?.vaciar();
+          // Empieza un turno nuevo: la respuesta anterior ya no corresponde a lo que se esta diciendo.
+          if (evento.hablando) limpiarTurno();
           break;
         case 'interrupted':
           playbackRef.current?.vaciar();
@@ -149,6 +202,8 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
         case 'transcript':
           transcriptRef.current = evento.text;
           setTranscript(evento.text);
+          cancelarReinicioTurno();
+          setTurno({ transcript: evento.text, respuesta: '', error: null });
           break;
         case 'reply':
           setResultado({
@@ -158,16 +213,18 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
             datos: evento.datos ?? null,
             accionPropuesta: evento.accion_propuesta ?? null,
           });
+          setTurno((actual) => ({ ...actual, respuesta: evento.texto, error: null }));
           break;
         case 'error':
           setError(evento.message);
+          setTurno((actual) => ({ ...actual, error: evento.message }));
           break;
         default:
           break;
       }
       opcionesRef.current.onEvento?.(evento);
     },
-    [cambiarEstado],
+    [cambiarEstado, cancelarReinicioTurno, limpiarTurno, programarReinicioTurno],
   );
 
   const abrirSocket = useCallback(
@@ -202,18 +259,21 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
         if (intentosRef.current < REINTENTOS_MAX) {
           // El microfono sigue abierto; solo se reconecta (el servidor conserva la sesion por sesion_id).
           intentosRef.current += 1;
+          setReconectando(true);
           cambiarEstado('conectando');
           temporizadorRef.current = setTimeout(() => {
             if (generacion === generacionRef.current) abrirSocket(generacion);
-          }, 400 * 2 ** intentosRef.current);
+          }, Math.min(400 * 2 ** intentosRef.current, ESPERA_REINTENTO_MAX_MS));
           return;
         }
         liberarAudio();
+        setReconectando(false);
+        limpiarTurno();
         setError('Se perdió la conexión con el asistente de voz. Revisá que el servicio esté encendido y volvé a intentar.');
         cambiarEstado('error');
       };
     },
-    [cambiarEstado, enviar, liberarAudio, manejarEvento],
+    [cambiarEstado, enviar, liberarAudio, limpiarTurno, manejarEvento],
   );
 
   const terminar = useCallback(() => {
@@ -233,8 +293,10 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     }
     liberarAudio();
     setUsuarioHablando(false);
+    setReconectando(false);
+    limpiarTurno();
     cambiarEstado('apagada');
-  }, [cambiarEstado, liberarAudio]);
+  }, [cambiarEstado, liberarAudio, limpiarTurno]);
 
   const iniciar = useCallback(async () => {
     if (estadoRef.current !== 'apagada' && estadoRef.current !== 'error') return;
@@ -242,6 +304,8 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     cerradaAPropositoRef.current = false;
     intentosRef.current = 0;
     setError(null);
+    setReconectando(false);
+    limpiarTurno();
     transcriptRef.current = '';
     setTranscript('');
     cambiarEstado('conectando');
@@ -305,7 +369,7 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
       setError(mensajeDeError(err));
       cambiarEstado('error');
     }
-  }, [abrirSocket, cambiarEstado, liberarAudio]);
+  }, [abrirSocket, cambiarEstado, liberarAudio, limpiarTurno]);
 
   const alternar = useCallback(() => {
     if (estadoRef.current === 'apagada' || estadoRef.current === 'error') void iniciar();
@@ -339,10 +403,12 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
   return {
     estado,
     activa,
+    reconectando,
     usuarioHablando,
     silenciado,
     transcript,
     resultado,
+    turno,
     error,
     nivelMicRef,
     iniciar,

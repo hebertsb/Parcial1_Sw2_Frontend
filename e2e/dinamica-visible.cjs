@@ -1,12 +1,16 @@
 // Voz + UI Dinamica: se ve lo que hace el agente MIENTRAS habla, sin cambiar a "Solo Voz".
 // Comprueba, en un navegador real y con el backend real:
-//   1. Al entrar a "Voz + UI Dinamica" se sigue viendo la app (no aparece la pantalla de Solo Voz) y la barra inferior
-//      no ofrece pasar a Solo Voz.
-//   2. "Mostrame la cartelera": la pantalla va sola a la cartelera y muestra las peliculas.
+//   1. Al entrar a "Voz + UI Dinamica" se sigue viendo la app (no aparece la pantalla de Solo Voz), el panel de voz queda
+//      DEBAJO del selector de modo (no flotando abajo) y la barra inferior no ofrece pasar a Solo Voz.
+//   2. "Mostrame la cartelera": la pantalla va sola a la cartelera y muestra las peliculas; el panel muestra lo que se
+//      entendio y lo que contesta, y al terminar de hablar VUELVE SOLO a "escuchando" (sin la respuesta vieja).
 //   3. "Quiero entradas para X": la tarjeta de X se RESALTA y su horario se marca ANTES de saltar a los asientos
 //      (se mide el orden en el tiempo), y despues la pantalla pasa a los asientos con la funcion elegida.
 //   4. Si el usuario ya esta en los asientos y solo cambia la funcion, no lo saca de ahi.
-// NO confirma nada (no escribe en la base compartida).
+//   7. Las ventanas flotantes se abren debajo del panel, la de confirmacion se cierra al completarse la compra y el
+//      ticket no queda flotando al salir de la compra.
+//   8. Un error de UN turno ("no pude procesar la frase") se muestra y se va solo; no queda pegado.
+// NO confirma nada (no escribe en la base compartida): los pasos 7 y 8 inyectan acciones/eventos en el navegador.
 // Uso: SILENCIO_WAV=/ruta/silencio.wav node e2e/dinamica-visible.cjs
 const { chromium } = require('playwright-core');
 
@@ -38,6 +42,7 @@ function verificar(nombre, ok, detalle = '') {
     const WS = window.WebSocket;
     window.WebSocket = function (...a) {
       const w = new WS(...a);
+      window.__ws = w; // para inyectar eventos del servidor desde la prueba (ver el paso 8)
       w.addEventListener('message', (e) => { if (typeof e.data === 'string') { try { window.__ev.push(JSON.parse(e.data)); } catch { /* ignorar */ } } });
       return w;
     };
@@ -74,12 +79,17 @@ function verificar(nombre, ok, detalle = '') {
   console.log('== 1) Entro a "Voz + UI Dinámica" desde el INICIO ==');
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click({ timeout: 8000 });
-  await page.waitForSelector('[data-testid="voice-dock"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
   await page.waitForFunction(() => window.__ev.some((e) => e.type === 'ready'), null, { timeout: 20000 });
   let texto = await pantalla();
   verificar('NO aparece la pantalla de Solo Voz', !/Canal de Voz Bidireccional/i.test(texto) && !page.url().endsWith('/voz'), page.url());
   verificar('se sigue viendo el Inicio de la app', /LUMEN/i.test(texto) && page.url().replace(BASE, '') === '/');
-  verificar('la barra inferior NO ofrece pasar a Solo Voz mientras esta activo Voz + UI', (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0 && (await page.getByTestId('voz-ui-activa').count()) === 1);
+  verificar('la barra inferior NO ofrece pasar a Solo Voz ni repite el panel de voz', (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0 && (await page.getByTestId('voz-ui-activa').count()) === 0);
+  const selector = await page.getByRole('button', { name: /Modo Táctil/ }).boundingBox();
+  const panel = await page.getByTestId('voice-strip').boundingBox();
+  verificar('el panel de voz queda DEBAJO del selector de modo', !!selector && !!panel && panel.y >= selector.y + selector.height - 2, selector && panel ? `selector y=${Math.round(selector.y)}, panel y=${Math.round(panel.y)}` : '');
+  verificar('no hay un panel flotante abajo (es uno solo, arriba)', (await page.getByTestId('voice-dock').count()) === 0);
+  verificar('recien abierto muestra "escuchando" y los textos en blanco', /Escuchando/i.test(await page.getByTestId('strip-estado').innerText()) && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
   await page.screenshot({ path: 'dv1_inicio_con_asistente.png' });
 
   console.log('\n== 2) "Mostrame la cartelera": la pantalla va sola a la cartelera ==');
@@ -88,8 +98,12 @@ function verificar(nombre, ok, detalle = '') {
   await page.waitForSelector('.movie-card', { timeout: 15000 }).catch(() => {});
   verificar('navego a /cartelera sin que nadie toque nada', page.url().endsWith('/cartelera'), page.url());
   verificar('se ven las peliculas', (await page.locator('.movie-card').count()) > 0, `${await page.locator('.movie-card').count()} tarjetas`);
-  verificar('sigue el asistente flotando (no cambio a Solo Voz)', (await page.getByTestId('voice-dock').count()) === 1 && !/Canal de Voz Bidireccional/i.test(await pantalla()));
+  verificar('sigue el panel de voz arriba (no cambio a Solo Voz)', (await page.getByTestId('voice-strip').count()) === 1 && !/Canal de Voz Bidireccional/i.test(await pantalla()));
+  verificar('mientras responde muestra lo que se le entendio y lo que contesta', (await page.getByTestId('strip-transcript').innerText()).includes('cartelera') && (await page.getByTestId('strip-respuesta').count()) === 1);
   await page.screenshot({ path: 'dv2_cartelera.png' });
+  // Cuando el agente termina de hablar el panel vuelve solo a "escuchando": no se queda con la respuesta de la accion anterior.
+  await page.waitForSelector('[data-testid="strip-respuesta-vacio"]', { timeout: 40000 }).catch(() => {});
+  verificar('al terminar de hablar el panel VUELVE SOLO a "escuchando" (sin la respuesta vieja)', (await page.getByTestId('strip-respuesta-vacio').count()) === 1 && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && /Escuchando/i.test(await page.getByTestId('strip-estado').innerText()));
 
   console.log(`\n== 3) "Quiero entradas para ${PELICULA}": se VE la eleccion y despues pasa a los asientos ==`);
   await page.evaluate(() => { window.__linea.length = 0; });
@@ -127,6 +141,40 @@ function verificar(nombre, ok, detalle = '') {
   verificar('se resalta la pelicula que se señala', (await page.locator('[data-pelicula-resaltada="true"]').count()) === 1);
   await page.waitForTimeout(13000);
   verificar('a los ~12 s se apaga solo', (await page.locator('[data-pelicula-resaltada="true"]').count()) === 0);
+
+  console.log('\n== 7) Ventanas flotantes: debajo del panel de voz y sin dejar cosas viejas ==');
+  const abrirConfirmacion = { tipo: 'ventana.abrir', ventana: 'confirmacion', datos: { titulo: 'Confirmá tu compra', resumen: '2 entradas para Prueba, asientos C4 y C5', total: 70, metodoPago: 'efectivo', aviso: 'Recordá que las entradas no tienen reembolso.' } };
+  await page.evaluate((a) => window.__lumen.aplicarUi([a]), abrirConfirmacion);
+  await page.waitForSelector('[data-ventana="Confirmá tu compra"]', { timeout: 5000 });
+  const panelAbajo = await page.getByTestId('voice-strip').boundingBox();
+  const ventana = await page.locator('[data-ventana="Confirmá tu compra"]').boundingBox();
+  verificar('la ventana se abre DEBAJO del panel de voz (no tapa el selector ni lo que se dice)', !!ventana && !!panelAbajo && ventana.y >= panelAbajo.y + panelAbajo.height, ventana && panelAbajo ? `ventana y=${Math.round(ventana.y)}, panel termina en ${Math.round(panelAbajo.y + panelAbajo.height)}` : '');
+  verificar('la ventana entra en pantalla (no se sale por abajo)', !!ventana && ventana.y + ventana.height <= 900, ventana ? `termina en ${Math.round(ventana.y + ventana.height)} de 900` : '');
+  await page.screenshot({ path: 'dv5_ventana_confirmacion.png' });
+  // El servidor de esta prueba puede no mandar el cierre (ya lo manda el codigo nuevo): la pantalla igual lo resuelve sola.
+  const ticket = { tipo: 'ventana.abrir', ventana: 'ticket', datos: { venta: { idVenta: 999, total: '70.00' }, pelicula: 'Prueba', funcion: null, sala: 'Sala de prueba', asientos: ['C4', 'C5'], dulceria: [] } };
+  await page.evaluate((t) => window.__lumen.aplicarUi([{ tipo: 'compra.completada', venta: null }, t]), ticket);
+  await page.waitForSelector('[data-ventana="Entrada digital"]', { timeout: 5000 });
+  await page.waitForTimeout(400);
+  verificar('al completarse la compra la confirmacion ("Deci confirmo") se CIERRA sola', (await page.locator('[data-ventana="Confirmá tu compra"]').count()) === 0);
+  verificar('y queda la entrada digital a la vista', (await page.locator('[data-ventana="Entrada digital"]').count()) === 1);
+  await page.screenshot({ path: 'dv6_ticket_sin_confirmacion.png' });
+  await page.evaluate(() => window.__lumen.aplicarUi([{ tipo: 'navegar', destino: 'cartelera' }]));
+  await page.waitForTimeout(600);
+  verificar('al salir de la compra el ticket no queda flotando sobre la cartelera', (await page.locator('[data-ventana="Entrada digital"]').count()) === 0 && page.url().endsWith('/cartelera'), page.url());
+
+  console.log('\n== 8) Un error de un turno se muestra y se va solo ==');
+  await page.evaluate(() => {
+    const emitir = (o) => window.__ws.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(o) }));
+    emitir({ type: 'transcript', text: 'Quiero juntos en el medio' });
+    emitir({ type: 'error', message: 'Ocurrió un error procesando la frase.' });
+    emitir({ type: 'state', value: 'escuchando' });
+  });
+  await page.waitForTimeout(300);
+  verificar('se ve lo que se dijo y el error de ese turno', (await page.getByTestId('strip-transcript').innerText()).includes('juntos en el medio') && /error procesando/i.test(await page.getByTestId('strip-error').innerText().catch(() => '')));
+  await page.screenshot({ path: 'dv7_error_de_turno.png' });
+  await page.waitForSelector('[data-testid="strip-error"]', { state: 'detached', timeout: 8000 }).catch(() => {});
+  verificar('pasado un momento el panel vuelve a "escuchando" y el error no queda pegado', (await page.getByTestId('strip-error').count()) === 0 && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
 
   console.log('\nerrores de la pagina:', errores.length ? errores : 'ninguno');
   verificar('sin errores en consola', errores.length === 0);

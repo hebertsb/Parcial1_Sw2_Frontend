@@ -64,8 +64,8 @@ function verificar(nombre, ok, detalle = '') {
   console.log('== 1) Entro a "Voz + UI Dinámica" desde la cartelera ==');
   await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click({ timeout: 8000 });
-  await page.waitForSelector('[data-testid="voice-dock"]', { timeout: 15000 });
-  verificar('aparece el dock de voz SOBRE la app (no una pantalla completa)', true);
+  await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
+  verificar('aparece el panel de voz debajo del selector de modo, SOBRE la app (no una pantalla completa)', true);
   verificar('la cartelera sigue a la vista debajo', await page.getByText('Películas en Cartelera').count() > 0);
   await page.waitForFunction(() => window.__ev.some((e) => e.type === 'ready'), null, { timeout: 20000 });
   verificar('la conversacion se abrio sola (sin botones de grabar)', true);

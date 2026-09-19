@@ -107,13 +107,9 @@ export const BottomHUD = ({ onVoiceMode, modo = 'tactil' }: BottomHUDProps) => {
             <span className="material-symbols-outlined text-primary text-[24px]">support_agent</span>
             <span className="hidden sm:inline">Llamar Asistente</span>
           </button>
-          {modo === 'hibrido' ? (
-            <div data-testid="voz-ui-activa" className="h-touch-target-kiosk px-space-md rounded-xl bg-primary-container/20 text-primary flex items-center gap-space-xs font-label-lg text-label-lg">
-              <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
-              <span className="material-symbols-outlined text-[22px]">graphic_eq</span>
-              <span className="hidden md:inline">Voz + UI activa: hablale a Lumen</span>
-            </div>
-          ) : (
+          {/* En "Voz + UI Dinámica" el panel de voz ya está arriba, debajo del selector: acá no se repite ni se ofrece
+              pasar a Solo Voz (taparía la app que se está usando). */}
+          {modo !== 'hibrido' && (
             <button onClick={onVoiceMode} className="h-touch-target-kiosk px-space-md rounded-xl bg-secondary-container/20 hover:bg-secondary-container/30 text-secondary flex items-center gap-space-xs font-label-lg text-label-lg transition-all active:scale-95">
               <div className="w-3 h-3 rounded-full bg-secondary animate-ping"></div>
               <span className="material-symbols-outlined text-[22px]">mic</span>

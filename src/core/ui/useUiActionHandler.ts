@@ -69,6 +69,7 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
         switch (accion.tipo) {
           // ---- estado de la compra (se aplica en todos los modos)
           case 'compra.seleccionar_funcion':
+            ventanas.cerrar('ticket'); // arranca otra compra: el comprobante de la anterior ya no corresponde
             dispatch({ type: 'SELECCIONAR_PELICULA', payload: { pelicula: accion.pelicula, horario: accion.horario } });
             dispatch({ type: 'SET_FUNCION_SELECCIONADA', payload: accion.funcion });
             break;
@@ -79,11 +80,14 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
             dispatch({ type: 'SET_CANDYBAR', payload: accion.items });
             break;
           case 'compra.completada':
+            ventanas.cerrar('confirmacion'); // ya se pagó: no queda nada por confirmar (el servidor también lo cierra)
             if (accion.venta) dispatch({ type: 'SET_VENTA_CREADA', payload: accion.venta });
             dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'completado' });
             irA('/compra');
             break;
           case 'compra.reiniciar':
+            ventanas.cerrar('confirmacion');
+            ventanas.cerrar('ticket');
             dispatch({ type: 'RESETEAR_COMPRA' });
             break;
 
@@ -98,6 +102,7 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
               if (conPantalla) control.pedirAdminTab(tab);
               irA(RUTA_ADMIN);
             } else if (RUTAS[accion.destino]) {
+              ventanas.cerrar('ticket'); // se sale de la compra: el comprobante no tiene que quedar flotando sobre otra pantalla
               irA(RUTAS[accion.destino]!);
             }
             break;
@@ -109,6 +114,7 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
             if (!conPantalla) break;
             // Si ya esta en los asientos y solo cambia la funcion, no se lo saca de ahi para mostrar la cartelera.
             if (accion.omitir_en_compra && rutaRef.current === '/compra') break;
+            ventanas.cerrar('ticket');
             control.filtrarCartelera({ busqueda: null, dia: null }); // que ningun filtro anterior oculte lo que se va a mostrar
             control.resaltarCartelera(accion.ids, accion.idFuncion ?? null);
             irA('/cartelera');

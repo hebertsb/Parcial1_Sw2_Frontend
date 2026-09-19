@@ -26,17 +26,28 @@ interface Ventanas {
 
 export const ANCHO_VENTANA: Record<TipoVentana, number> = { confirmacion: 440, reporte: 560, ticket: 400 };
 
+/**
+ * Borde de abajo del panel de voz (mas un margen) si esta a la vista, o 0. Las ventanas se abren DEBAJO: no deben tapar
+ * el selector de modo ni lo que se esta diciendo. Como el panel es fijo, esta medida es la misma con o sin scroll.
+ */
+function topeDelPanelDeVoz(): number {
+  if (typeof document === 'undefined') return 0;
+  const panel = document.querySelector('[data-testid="voice-strip"]');
+  return panel ? Math.round(panel.getBoundingClientRect().bottom + 12) : 0;
+}
+
 /** Donde aparece cada ventana la primera vez: escalonadas para que no se tapen entre si. */
 function posicionInicial(tipo: TipoVentana): { x: number; y: number } {
   const ancho = typeof window === 'undefined' ? 1280 : window.innerWidth;
   const w = ANCHO_VENTANA[tipo];
+  const tope = topeDelPanelDeVoz();
   switch (tipo) {
     case 'confirmacion':
-      return { x: Math.max(8, ancho - w - 32), y: 120 };
+      return { x: Math.max(8, ancho - w - 32), y: Math.max(120, tope) };
     case 'reporte':
-      return { x: Math.max(8, 32), y: 130 };
+      return { x: Math.max(8, 32), y: Math.max(130, tope) };
     case 'ticket':
-      return { x: Math.max(8, Math.round((ancho - w) / 2)), y: 96 };
+      return { x: Math.max(8, Math.round((ancho - w) / 2)), y: Math.max(96, tope) };
   }
 }
 

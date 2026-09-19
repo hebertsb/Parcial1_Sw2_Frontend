@@ -3,6 +3,7 @@ import { useAuth } from '../controllers/AuthContext';
 import { useCine } from '../controllers/CineContext';
 import { BottomHUD } from '../components/widgets/BottomHUD';
 import { TopModeSwitcher } from '../components/widgets/TopModeSwitcher';
+import { VoiceStrip } from '../components/voice/VoiceStrip';
 import { useVozSesion, type ModoInteraccion } from '../core/voice/VoiceSessionProvider';
 
 export type InteractionMode = ModoInteraccion;
@@ -24,7 +25,7 @@ export const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   // El modo lo tiene el proveedor de voz (no este componente): asi la conversacion no se corta al navegar.
-  const { modo: interactionMode, setModo } = useVozSesion();
+  const { modo: interactionMode, setModo, voz } = useVozSesion();
 
   const goHome = () => {
     dispatch({ type: 'RESETEAR_COMPRA' });
@@ -217,8 +218,12 @@ export const Layout = () => {
 
       <main className="w-full pt-20 flex-grow flex flex-col bg-surface-container-lowest relative z-10">
         <div className="w-full h-full flex-grow flex flex-col relative">
-          {showTopModeSwitcher && (
-            <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} />
+          {/* Selector de modo + panel de voz (solo en "Voz + UI Dinámica"): quedan juntos y fijos arriba mientras se navega. */}
+          {(showTopModeSwitcher || interactionMode === 'hibrido') && (
+            <div className="sticky top-20 z-20 bg-surface-container-lowest">
+              {showTopModeSwitcher && <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} />}
+              {interactionMode === 'hibrido' && <VoiceStrip voz={voz} onCerrar={() => setModo('tactil')} />}
+            </div>
           )}
           <Outlet />
         </div>

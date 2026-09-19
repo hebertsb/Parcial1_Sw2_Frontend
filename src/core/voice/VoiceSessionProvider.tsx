@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../controllers/AuthContext';
+import { useCine } from '../../controllers/CineContext';
 import { CapaVentanas } from '../../components/windows/CapaVentanas';
 import { VoiceDock } from '../../components/voice/VoiceDock';
 import { useUiActionHandler, type ModoInteraccion } from '../ui/useUiActionHandler';
@@ -17,15 +18,12 @@ interface ContextoVoz {
 
 const VozContext = createContext<ContextoVoz | undefined>(undefined);
 
-/** Paginas que muestran la barra inferior de la app (BottomHUD): el dock de voz se sube para no taparla. */
-const RUTAS_CON_BARRA_INFERIOR = ['/', '/cartelera', '/compra'];
-
 /**
  * Dueño UNICO de la conversacion de voz. Vive arriba de las rutas (dentro del router y de los contextos de la app):
  * asi la sesion no se corta al navegar, ni al pasar de "Voz + UI Dinamica" a "Solo Voz", y el agente puede mover la
  * app real (router + estado de la compra) con las acciones de interfaz que manda el servidor.
  *
- *  - tactil: sin microfono.  hibrido: microfono + dock flotante + ventanas sobre la app real.
+ *  - tactil: sin microfono.  hibrido: microfono + panel de voz (debajo del selector de modo) + ventanas sobre la app real.
  *  - voz: microfono + pantalla de voz pura (RF16); el estado de la compra se actualiza pero no se navega.
  */
 export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
@@ -47,7 +45,14 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
     },
   });
   const { iniciar, terminar } = voz;
-  const { cerrarTodas } = ventanas;
+  const { cerrarTodas, cerrar } = ventanas;
+  const { state: cine } = useCine();
+
+  // La entrada digital es el comprobante de la compra TERMINADA: cuando la compra se reinicia (volver al inicio, empezar
+  // otra) ya no corresponde y no debe quedar flotando sobre lo que sigue.
+  useEffect(() => {
+    if (cine.estadoCompra !== 'completado') cerrar('ticket');
+  }, [cine.estadoCompra, cerrar]);
 
   // El microfono solo esta abierto en los modos con voz, y nunca sin sesion (la voz exige cuenta; ver Layout.tsx).
   useEffect(() => {
@@ -82,7 +87,9 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
       {modo === 'hibrido' && (
         <>
           <CapaVentanas onCancelar={() => voz.enviarTexto('cancelá')} onConfirmar={() => voz.enviarTexto('confirmo')} />
-          <VoiceDock voz={voz} sobreBarraInferior={RUTAS_CON_BARRA_INFERIOR.includes(location.pathname)} onCerrar={() => setModo('tactil')} />
+          {/* En la app de cliente el panel de voz va en el Layout, debajo del selector de modo (VoiceStrip). La consola de
+              administrador no tiene ese selector: ahi el asistente queda como panel flotante. */}
+          {location.pathname.startsWith('/admin') && <VoiceDock voz={voz} onCerrar={() => setModo('tactil')} />}
         </>
       )}
     </VozContext.Provider>

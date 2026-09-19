@@ -55,8 +55,9 @@ export const VentanaFlotante = ({ titulo, icono, ancho, x, y, z, acento = 'prima
       role="dialog"
       aria-label={titulo}
       data-ventana={titulo}
-      className="fixed max-h-[calc(100vh-7rem)] flex flex-col rounded-2xl bg-surface-container/95 backdrop-blur-2xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] overflow-hidden select-none"
-      style={{ left: x, top: y, width: ancho, maxWidth: 'calc(100vw - 16px)', zIndex: z }}
+      className="fixed flex flex-col rounded-2xl bg-surface-container/95 backdrop-blur-2xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] overflow-hidden select-none"
+      // Alto maximo: lo que queda de pantalla debajo de donde esta (deja libre la barra inferior); si no entra, el contenido se desplaza.
+      style={{ left: x, top: y, width: ancho, maxWidth: 'calc(100vw - 16px)', maxHeight: `max(240px, calc(100vh - ${y + 104}px))`, zIndex: z }}
       initial={{ opacity: 0, scale: 0.92, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, y: 8, transition: { duration: 0.16 } }}

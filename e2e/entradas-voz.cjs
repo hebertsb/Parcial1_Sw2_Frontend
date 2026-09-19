@@ -58,7 +58,7 @@ if (!SILENCIO) throw new Error('Falta SILENCIO_WAV (ruta a un WAV de silencio, v
   console.log('\n== C) Cartelera -> "Voz + UI Dinámica" -> cambio a "Solo Voz" sin cortar la sesion ==');
   await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click();
-  await page.waitForSelector('[data-testid="voice-dock"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
   await page.waitForFunction(() => window.__ev.filter((e) => e.type === 'ready').length >= 1, null, { timeout: 20000 });
   const listosAntes = await page.evaluate(() => window.__ev.filter((e) => e.type === 'ready').length);
   await page.getByRole('button', { name: /Solo Voz/ }).first().click();
@@ -68,13 +68,13 @@ if (!SILENCIO) throw new Error('Falta SILENCIO_WAV (ruta a un WAV de silencio, v
   v('pasar de hibrido a solo voz NO reabre la conversacion (misma sesion)', listosDespues === listosAntes, `ready: ${listosAntes} -> ${listosDespues}`);
   v('sigue activa', (await page.evaluate(() => window.__lumen.voz.activa)) === true);
 
-  console.log('\n== D) Cerrar el dock (x) vuelve al modo tactil ==');
+  console.log('\n== D) Cerrar el panel de voz (x) vuelve al modo tactil ==');
   await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click();
-  await page.waitForSelector('[data-testid="voice-dock"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
   await page.getByRole('button', { name: /Cerrar el asistente de voz/ }).click();
   await page.waitForTimeout(600);
-  v('el dock desaparece', await page.locator('[data-testid="voice-dock"]').count() === 0);
+  v('el panel de voz desaparece', await page.locator('[data-testid="voice-strip"]').count() === 0);
   v('modo tactil y mic cerrado', (await modo()) === 'tactil' && (await page.evaluate(() => window.__lumen.voz.estado)) === 'apagada');
 
   console.log('\n== E) Sin sesion iniciada, la voz pide login ==');

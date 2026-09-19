@@ -4,8 +4,6 @@ import type { SesionVoz } from '../../core/voice/useVoiceSession';
 
 interface VoiceDockProps {
   voz: SesionVoz;
-  /** Deja libre la barra inferior de la app (BottomHUD) cuando la pagina la muestra. */
-  sobreBarraInferior: boolean;
   onCerrar: () => void;
 }
 
@@ -19,11 +17,12 @@ const ESTADO_TEXTO = {
 } as const;
 
 /**
- * Modo "Voz + UI Dinámica": un panel compacto y flotante, para que la app siga a la vista mientras se habla (el agente
- * la mueve sola). Muestra en vivo lo que se entendio y lo que contesta el agente; el mic se pausa con su boton y
- * hay un campo para escribir por si el ambiente es ruidoso.
+ * Panel de voz flotante de "Voz + UI Dinámica" para las pantallas SIN selector de modo (la consola de administrador);
+ * en la app de cliente el panel es `VoiceStrip`, debajo del selector. Muestra en vivo lo que se entendio y lo que
+ * contesta el agente, y vuelve solo a "escuchando" al terminar cada intercambio; el mic se pausa con su boton y hay
+ * un campo para escribir por si el ambiente es ruidoso.
  */
-export const VoiceDock = ({ voz, sobreBarraInferior, onCerrar }: VoiceDockProps) => {
+export const VoiceDock = ({ voz, onCerrar }: VoiceDockProps) => {
   const orbeRef = useRef<HTMLDivElement | null>(null);
   const [escribiendo, setEscribiendo] = useState(false);
   const [texto, setTexto] = useState('');
@@ -73,7 +72,7 @@ export const VoiceDock = ({ voz, sobreBarraInferior, onCerrar }: VoiceDockProps)
   return createPortal(
     <div
       data-testid="voice-dock"
-      className={`fixed left-1/2 -translate-x-1/2 z-[90] w-[min(780px,calc(100vw-1rem))] flex flex-col gap-space-xs ${sobreBarraInferior ? 'bottom-28' : 'bottom-6'}`}
+      className="fixed left-1/2 -translate-x-1/2 bottom-6 z-[90] w-[min(780px,calc(100vw-1rem))] flex flex-col gap-space-xs"
     >
       {escribiendo && (
         <form onSubmit={enviar} className="flex items-center gap-space-xs rounded-full bg-surface-container/95 backdrop-blur-2xl shadow-xl px-space-md py-space-xs">
@@ -108,17 +107,20 @@ export const VoiceDock = ({ voz, sobreBarraInferior, onCerrar }: VoiceDockProps)
           <span className="font-label-code text-label-code text-secondary uppercase tracking-wider truncate" data-testid="dock-estado">
             {estadoTexto}
           </span>
-          {voz.transcript && (
+          {voz.turno.transcript && (
             <span className="font-body-sm text-body-sm text-on-surface-variant truncate" data-testid="dock-transcript">
-              Vos: {voz.transcript}
+              Vos: {voz.turno.transcript}
             </span>
           )}
-          {voz.resultado?.replyText && (
+          {voz.turno.respuesta && (
             <span className="font-body-md text-body-md text-on-surface line-clamp-2" data-testid="dock-respuesta">
-              {voz.resultado.replyText}
+              {voz.turno.respuesta}
             </span>
           )}
-          {voz.error && <span className="font-label-md text-label-md text-error">{voz.error}</span>}
+          {/* Un fallo de la conversacion se queda; el de un turno se va con el turno. */}
+          {(voz.estado === 'error' ? voz.error : voz.turno.error) && (
+            <span className="font-label-md text-label-md text-error">{voz.estado === 'error' ? voz.error : voz.turno.error}</span>
+          )}
         </div>
 
         <div className="flex items-center gap-space-2xs shrink-0">
