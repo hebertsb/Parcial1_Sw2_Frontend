@@ -21,6 +21,7 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
   const [duracionMin, setDuracionMin] = useState(pelicula?.duracionMin ?? 90);
   const [clasificacion, setClasificacion] = useState(pelicula?.clasificacion ?? '');
   const [posterUrl, setPosterUrl] = useState(pelicula?.posterUrl ?? '');
+  const [sinopsis, setSinopsis] = useState(pelicula?.sinopsis ?? '');
   const [subiendo, setSubiendo] = useState(false);
   const [errorSubida, setErrorSubida] = useState<string | null>(null);
 
@@ -46,6 +47,7 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
       duracionMin,
       clasificacion: clasificacion || undefined,
       posterUrl: posterUrl || undefined,
+      sinopsis: sinopsis || undefined,
     });
   };
 
@@ -82,6 +84,17 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
           <label className="flex flex-col gap-space-2xs">
             <span className={LABEL}>Clasificación</span>
             <input value={clasificacion} onChange={(e) => setClasificacion(e.target.value)} className={CAMPO} maxLength={10} placeholder="ej. +16" />
+          </label>
+          <label className="flex flex-col gap-space-2xs md:col-span-2">
+            <span className={LABEL}>Sinopsis</span>
+            <textarea
+              value={sinopsis}
+              onChange={(e) => setSinopsis(e.target.value)}
+              className={`${CAMPO.replace('h-11', 'min-h-24 py-space-xs')} resize-y`}
+              maxLength={2000}
+              rows={3}
+              placeholder="Descripción breve de la película"
+            />
           </label>
         </div>
       </div>

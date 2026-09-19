@@ -9,6 +9,8 @@ export interface Pelicula {
   clasificacion: string | null;
   estado: EstadoPelicula;
   posterUrl: string | null;
+  /** Descripción (2026-09-18). Opcional en el tipo para no romper quien arma una `Pelicula` a mano; el backend siempre la devuelve (`null` si no hay). */
+  sinopsis?: string | null;
 }
 
 /** Body de `POST /peliculas` / `PATCH /peliculas/:id` — misma forma que `CrearPeliculaDto` del backend. */
@@ -18,4 +20,5 @@ export interface CrearPeliculaInput {
   duracionMin: number;
   clasificacion?: string;
   posterUrl?: string;
+  sinopsis?: string;
 }
