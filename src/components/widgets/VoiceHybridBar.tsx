@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../controllers/AuthContext';
-import { sendVoiceMessage, type VoiceChatResult } from '../../api/voice.api';
+import { useVoiceSession } from '../../core/voice/useVoiceSession';
 import type { DatosConsultaCartelera } from '../../core/types/voice.types';
 import { posterFor } from '../../core/posters';
 
@@ -40,65 +40,39 @@ const ETIQUETA_INTENCION: Record<string, string> = {
 export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void; topOffset?: number }) => {
   const { usuario, token } = useAuth();
   const sesionIdRef = useRef(crypto.randomUUID());
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  const [estado, setEstado] = useState<Estado>('idle');
-  const [resultado, setResultado] = useState<VoiceChatResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Conversacion continua: el microfono queda abierto y el servidor detecta solo cuando terminas de
+  // hablar; se puede interrumpir al agente hablando encima. No hay botones de grabar / enviar.
+  const sesion = useVoiceSession({ rol: usuario?.rol ?? 'cliente', token, sesionId: sesionIdRef.current });
+  const { iniciar } = sesion;
+  const resultado = sesion.resultado;
+  const error = sesion.error;
+  const apagada = sesion.estado === 'apagada' || sesion.estado === 'error';
 
+  const estado: Estado =
+    sesion.estado === 'escuchando'
+      ? 'escuchando'
+      : sesion.estado === 'pensando' || sesion.estado === 'conectando'
+        ? 'procesando'
+        : sesion.estado === 'hablando'
+          ? 'hablando'
+          : 'idle';
+
+  // Al entrar a este modo la conversacion arranca sola (ya hubo un clic del usuario para llegar aca).
   useEffect(() => {
-    return () => {
-      if (resultado?.audioUrl) URL.revokeObjectURL(resultado.audioUrl);
-    };
-  }, [resultado?.audioUrl]);
+    void iniciar();
+  }, [iniciar]);
 
-  const startRecording = async () => {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
-        void enviar(audioBlob);
-      };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setEstado('escuchando');
-    } catch {
-      setError('No se pudo acceder al micrófono. Revisá los permisos del navegador.');
-    }
+  // Boton de la barra: apagada -> (re)inicia; en curso -> pausa / reanuda el microfono.
+  const toggleMic = () => {
+    if (apagada) void sesion.iniciar();
+    else sesion.silenciar(!sesion.silenciado);
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current = null;
-  };
-
-  const enviar = async (audioBlob: Blob) => {
-    setEstado('procesando');
-    try {
-      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current, token);
-      setResultado(result);
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = result.audioUrl;
-        await audioPlayerRef.current.play();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo hablar con el agente.');
-      setEstado('idle');
-    }
-  };
-
-  const toggleGrabar = () => {
-    if (estado === 'idle') void startRecording();
-    else if (estado === 'escuchando') stopRecording();
+  // Orbe: apagada -> (re)inicia; mientras el agente habla -> lo interrumpe.
+  const handleOrbe = () => {
+    if (apagada) void sesion.iniciar();
+    else if (sesion.estado === 'hablando') sesion.interrumpir();
   };
 
   const datosCartelera = resultado?.tipo === 'resultado_consulta' ? (resultado.datos as DatosConsultaCartelera | null) : null;
@@ -114,12 +88,19 @@ export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void
       : null;
   const hayContenido = tieneListaPeliculas || tieneAccion || !!datosGenericos;
 
-  const estadoTexto = {
-    idle: 'Tocá el micrófono para hablar',
-    escuchando: 'Escuchando...',
-    procesando: 'Procesando...',
-    hablando: 'Lumen AI respondiendo...',
-  }[estado];
+  const estadoTexto = sesion.silenciado
+    ? 'Micrófono pausado'
+    : sesion.estado === 'conectando'
+      ? 'Conectando...'
+      : estado === 'escuchando'
+        ? sesion.usuarioHablando
+          ? 'Te escucho...'
+          : 'Escuchando — hablá cuando quieras'
+        : estado === 'procesando'
+          ? 'Procesando...'
+          : estado === 'hablando'
+            ? 'Lumen AI respondiendo — podés interrumpir'
+            : 'Tocá el micrófono para conversar';
 
   const isActive = estado === 'escuchando' || estado === 'hablando';
 
@@ -142,13 +123,6 @@ export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void
       className="fixed left-0 right-0 bottom-0 z-[95] bg-surface-container-lowest text-on-surface overflow-hidden select-none flex flex-col"
       style={{ top: topOffset }}
     >
-      <audio
-        ref={audioPlayerRef}
-        hidden
-        onPlay={() => setEstado('hablando')}
-        onEnded={() => setEstado('idle')}
-      />
-
       {/* Ambiente decorativo, igual familia visual que VoiceAgent.tsx */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[85vw] max-w-[1100px] h-[580px] bg-gradient-to-b from-primary/15 via-secondary/5 to-transparent blur-[110px] rounded-full opacity-70"></div>
@@ -181,14 +155,13 @@ export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void
         <div className="flex items-center gap-space-sm">
           <span className="hidden md:inline font-label-code text-label-code text-secondary uppercase tracking-wider">{estadoTexto}</span>
           <button
-            onClick={toggleGrabar}
-            disabled={estado === 'procesando' || estado === 'hablando'}
-            className={`relative flex items-center justify-center w-14 h-14 rounded-full shadow-[0_0_24px_-4px_rgba(245,158,11,0.4)] transition-all disabled:opacity-60 ${estado === 'escuchando' ? 'bg-error' : 'bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30'}`}
-            title={estado === 'escuchando' ? 'Detener grabación' : 'Hablar'}
+            onClick={toggleMic}
+            className={`relative flex items-center justify-center w-14 h-14 rounded-full shadow-[0_0_24px_-4px_rgba(245,158,11,0.4)] transition-all ${sesion.silenciado ? 'bg-error' : 'bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30'}`}
+            title={apagada ? 'Iniciar la conversación' : sesion.silenciado ? 'Reactivar el micrófono' : 'Pausar el micrófono'}
           >
-            {estado === 'escuchando' && <div className="absolute inset-0 rounded-full bg-error/30 animate-ping"></div>}
-            <span className={`material-symbols-outlined text-[24px] ${estado === 'escuchando' ? 'text-on-error' : 'text-primary'}`}>
-              {estado === 'escuchando' ? 'stop_circle' : 'mic'}
+            {sesion.usuarioHablando && !sesion.silenciado && <div className="absolute inset-0 rounded-full bg-secondary/30 animate-ping"></div>}
+            <span className={`material-symbols-outlined text-[24px] ${sesion.silenciado ? 'text-on-error' : 'text-primary'}`}>
+              {sesion.silenciado ? 'mic_off' : 'mic'}
             </span>
           </button>
           <button
@@ -254,14 +227,13 @@ export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void
               </svg>
 
               <button
-                onClick={toggleGrabar}
-                disabled={estado === 'procesando' || estado === 'hablando'}
-                className="relative w-40 h-40 sm:w-52 sm:h-52 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(245,158,11,0.45),inset_0_0_50px_rgba(3,181,211,0.5)] transition-transform duration-500 hover:scale-105 disabled:opacity-70 bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30 backdrop-blur-2xl"
+                onClick={handleOrbe}
+                className="relative w-40 h-40 sm:w-52 sm:h-52 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(245,158,11,0.45),inset_0_0_50px_rgba(3,181,211,0.5)] transition-transform duration-500 hover:scale-105 bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30 backdrop-blur-2xl"
               >
                 <div className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-primary via-primary-container to-secondary-container opacity-90 blur-[1px] flex items-center justify-center ${estado !== 'idle' ? 'animate-[pulse_2.2s_ease-in-out_infinite]' : ''}`}>
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center shadow-inner">
                     <span className={`material-symbols-outlined text-[32px] sm:text-[36px] drop-shadow-[0_0_12px_rgba(255,193,116,0.8)] text-primary ${estado === 'escuchando' ? 'animate-pulse' : ''}`}>
-                      {estado === 'escuchando' ? 'stop_circle' : 'graphic_eq'}
+                      {apagada ? 'mic' : 'graphic_eq'}
                     </span>
                   </div>
                 </div>
@@ -285,7 +257,7 @@ export const VoiceHybridBar = ({ onSalir, topOffset = 0 }: { onSalir: () => void
                     <div className="flex flex-col">
                       <span className="font-label-code text-label-code text-outline uppercase tracking-wider">Tú ({usuario?.rol === 'administrador' ? 'Administrador' : 'Cliente'})</span>
                       <p className="font-headline-sm text-headline-sm text-on-surface leading-snug tracking-tight">
-                        {resultado?.transcript || 'Presioná el micrófono y hablá para comenzar.'}
+                        {sesion.transcript || resultado?.transcript || 'Hablá con naturalidad: te escucho, no hace falta apretar nada.'}
                       </p>
                     </div>
                   </div>

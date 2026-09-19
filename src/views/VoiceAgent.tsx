@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sendVoiceMessage } from '../api/voice.api';
 import { useCine } from '../controllers/CineContext';
 import { useAuth } from '../controllers/AuthContext';
+import { useVoiceSession } from '../core/voice/useVoiceSession';
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -23,17 +23,27 @@ export const VoiceAgent = () => {
   // una misma conversacion para cuando el orquestador tenga historial.
   const sesionIdRef = useRef(crypto.randomUUID());
 
-  const [orbState, setOrbState] = useState<OrbState>('idle');
-  const [isMuted, setIsMuted] = useState(false);
-  const [holdProgress, setHoldProgress] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [replyText, setReplyText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  let holdTimer: any = null;
+  // Conversacion continua: el microfono queda abierto y el servidor detecta solo cuando terminas
+  // de hablar (sin botones de grabar/enviar); podes interrumpir al agente hablando encima.
+  const sesion = useVoiceSession({ rol: usuario?.rol ?? 'cliente', token, sesionId: sesionIdRef.current });
+  const { iniciar } = sesion;
+  const isMuted = sesion.silenciado;
+  const transcript = sesion.transcript;
+  const replyText = sesion.resultado?.replyText ?? '';
+  const error = sesion.error;
+  const orbRef = useRef<HTMLDivElement | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const orbState: OrbState =
+    sesion.estado === 'escuchando'
+      ? 'listening'
+      : sesion.estado === 'pensando' || sesion.estado === 'conectando'
+        ? 'thinking'
+        : sesion.estado === 'hablando'
+          ? 'speaking'
+          : 'idle';
+
+  const [holdProgress, setHoldProgress] = useState(0);
+  let holdTimer: any = null;
 
   const startHold = (e: MouseEvent | TouchEvent) => {
     e.preventDefault();
@@ -69,96 +79,51 @@ export const VoiceAgent = () => {
     };
   }, [holdProgress]);
 
-  const startRecording = async () => {
-    console.log('[voz] 1. pidiendo permiso de microfono...');
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('[voz] 2. permiso concedido, stream:', stream, 'tracks:', stream.getAudioTracks());
+  // Al entrar a la pantalla la conversacion arranca sola (ya hubo un clic del usuario para llegar aca).
+  useEffect(() => {
+    void iniciar();
+  }, [iniciar]);
 
-      const recorder = new MediaRecorder(stream);
-      console.log('[voz] 3. MediaRecorder creado, mimeType:', recorder.mimeType, 'state:', recorder.state);
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        console.log('[voz] 4. dataavailable, tamaño:', e.data.size);
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      recorder.onerror = (e) => {
-        console.error('[voz] ERROR en MediaRecorder:', e);
-      };
-      recorder.onstop = () => {
-        console.log('[voz] 5. recorder.onstop, chunks:', audioChunksRef.current.length);
-        stream.getTracks().forEach((track) => track.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
-        console.log('[voz] 6. blob final, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
-        void sendToAgent(audioBlob);
-      };
-
-      recorder.start();
-      console.log('[voz] 3b. recorder.start() llamado, state:', recorder.state);
-      mediaRecorderRef.current = recorder;
-      setOrbState('listening');
-    } catch (err) {
-      console.error('[voz] ERROR al pedir microfono:', err);
-      setError('No se pudo acceder al micrófono. Revisa los permisos del navegador.');
-    }
-  };
-
-  const stopRecording = () => {
-    console.log('[voz] stopRecording() llamado, recorder actual:', mediaRecorderRef.current, 'state:', mediaRecorderRef.current?.state);
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current = null;
-  };
-
-  const sendToAgent = async (audioBlob: Blob) => {
-    console.log('[voz] 7. enviando al backend, tamaño del blob:', audioBlob.size);
-    setOrbState('thinking');
-    try {
-      const result = await sendVoiceMessage(audioBlob, usuario?.rol ?? 'cliente', sesionIdRef.current, token);
-      console.log('[voz] 8. respuesta del backend:', result);
-      setTranscript(result.transcript);
-      setReplyText(result.replyText);
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = result.audioUrl;
-        await audioPlayerRef.current.play();
-        console.log('[voz] 9. reproduciendo audio de respuesta');
+  // El orbe "respira" con la voz del usuario (lee el nivel del microfono sin re-renderizar React).
+  useEffect(() => {
+    let cuadro = 0;
+    const animar = () => {
+      const orbe = orbRef.current;
+      if (orbe) {
+        const nivel = sesion.silenciado ? 0 : Math.min(sesion.nivelMicRef.current * 6, 1);
+        orbe.style.transform = `scale(${1 + nivel * 0.12})`;
       }
-    } catch (err) {
-      console.error('[voz] ERROR al hablar con el agente:', err);
-      setError(err instanceof Error ? err.message : 'No se pudo hablar con el agente.');
-      setOrbState('idle');
-    }
-  };
+      cuadro = requestAnimationFrame(animar);
+    };
+    cuadro = requestAnimationFrame(animar);
+    return () => cancelAnimationFrame(cuadro);
+  }, [sesion.nivelMicRef, sesion.silenciado]);
 
+  // Orbe: apagada/error -> (re)inicia; mientras el agente habla -> lo interrumpe. Pausar el microfono es el boton de mute.
   const handleOrbClick = () => {
-    console.log('[voz] click en el orbe, orbState actual:', orbState, 'isMuted:', isMuted);
-    if (isMuted) return;
-    if (orbState === 'idle') {
-      void startRecording();
-    } else if (orbState === 'listening') {
-      stopRecording();
-    }
+    if (sesion.estado === 'apagada' || sesion.estado === 'error') void sesion.iniciar();
+    else if (sesion.estado === 'hablando') sesion.interrumpir();
   };
 
-  const toggleMute = () => {
-    if (!isMuted && orbState === 'listening') {
-      stopRecording();
-    }
-    setIsMuted(!isMuted);
-  };
+  const toggleMute = () => sesion.silenciar(!sesion.silenciado);
 
   const offset = 320 - (320 * (holdProgress / 100));
 
   const statusText = isMuted
     ? 'MICRÓFONO PAUSADO'
-    : orbState === 'listening'
-      ? 'ESCUCHANDO TU RESPUESTA...'
-      : orbState === 'thinking'
-        ? 'PROCESANDO TU MENSAJE...'
-        : orbState === 'speaking'
-          ? 'LUMEN AI RESPONDIENDO...'
-          : 'PRESIONA EL ORBE PARA HABLAR';
+    : sesion.estado === 'conectando'
+      ? 'CONECTANDO CON LUMEN AI...'
+      : sesion.estado === 'escuchando'
+        ? sesion.usuarioHablando
+          ? 'TE ESCUCHO...'
+          : 'ESCUCHANDO — HABLÁ CUANDO QUIERAS'
+        : sesion.estado === 'pensando'
+          ? 'PROCESANDO TU MENSAJE...'
+          : sesion.estado === 'hablando'
+            ? 'LUMEN AI RESPONDIENDO — PODÉS INTERRUMPIR'
+            : sesion.estado === 'error'
+              ? 'CONVERSACIÓN DETENIDA — TOCÁ EL ORBE'
+              : 'TOCÁ EL ORBE PARA CONVERSAR';
 
   const statusColorClass = isMuted
     ? 'text-error'
@@ -180,13 +145,6 @@ export const VoiceAgent = () => {
 
   return (
     <div className="flex flex-col w-full absolute inset-0 z-[100] bg-surface-container-lowest text-on-surface overflow-hidden select-none min-h-screen">
-      <audio
-        ref={audioPlayerRef}
-        hidden
-        onPlay={() => setOrbState('speaking')}
-        onEnded={() => setOrbState('idle')}
-      />
-
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[85vw] max-w-[1100px] h-[580px] bg-gradient-to-b from-primary/15 via-secondary/5 to-transparent blur-[110px] rounded-full opacity-70"></div>
         <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary-container/10 blur-[130px] rounded-full"></div>
@@ -285,10 +243,10 @@ export const VoiceAgent = () => {
           </svg>
 
           <div onClick={handleOrbClick} className={`relative w-48 h-48 sm:w-60 sm:h-60 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(245,158,11,0.45),inset_0_0_50px_rgba(3,181,211,0.5)] transition-transform duration-500 hover:scale-105 cursor-pointer bg-gradient-to-tr from-surface-container via-primary-container/40 to-secondary/30 backdrop-blur-2xl ${isMuted ? 'grayscale' : ''}`}>
-            <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-primary via-primary-container to-secondary-container opacity-90 blur-[1px] ${!isMuted && 'animate-[pulse_2.2s_ease-in-out_infinite]'} flex items-center justify-center`}>
+            <div ref={orbRef} className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-primary via-primary-container to-secondary-container opacity-90 blur-[1px] ${!isMuted && 'animate-[pulse_2.2s_ease-in-out_infinite]'} flex items-center justify-center`}>
               <div className="w-20 h-20 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center shadow-inner">
                 <span className={`material-symbols-outlined text-[36px] drop-shadow-[0_0_12px_rgba(255,193,116,0.8)] ${isMuted ? 'text-on-surface-variant' : 'text-primary animate-pulse'}`}>
-                  {isMuted ? 'mic_off' : orbState === 'listening' ? 'stop_circle' : 'graphic_eq'}
+                  {isMuted ? 'mic_off' : sesion.estado === 'apagada' || sesion.estado === 'error' ? 'mic' : 'graphic_eq'}
                 </span>
               </div>
             </div>
@@ -312,7 +270,7 @@ export const VoiceAgent = () => {
                 <div className="flex flex-col">
                   <span className="font-label-code text-label-code text-outline uppercase tracking-wider">Tú (Cliente)</span>
                   <p className="font-headline-sm text-headline-sm text-on-surface leading-snug tracking-tight">
-                    {transcript || 'Presiona el orbe naranja y habla para comenzar.'}
+                    {transcript || 'Hablá con naturalidad: te escucho, no hace falta apretar nada.'}
                   </p>
                 </div>
               </div>
