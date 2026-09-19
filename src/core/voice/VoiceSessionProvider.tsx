@@ -4,7 +4,9 @@ import { useCine } from '../../controllers/CineContext';
 import { CapaVentanas } from '../../components/windows/CapaVentanas';
 import { useUiActionHandler, type ModoInteraccion } from '../ui/useUiActionHandler';
 import { useVentanas } from '../ui/VentanasContext';
+import { contextoDeCine } from './contextoCompra';
 import { useVoiceSession, type SesionVoz } from './useVoiceSession';
+import type { ContextoCompra } from './voiceProtocol';
 
 export type { ModoInteraccion } from '../ui/useUiActionHandler';
 
@@ -15,6 +17,9 @@ interface ContextoVoz {
 }
 
 const VozContext = createContext<ContextoVoz | undefined>(undefined);
+
+/** Junta varios cambios seguidos de la pantalla (ej. marcar dos butacas) en una sola foto. */
+const PAUSA_ENVIO_CONTEXTO_MS = 200;
 
 /**
  * Dueño UNICO de la conversacion de voz. Vive arriba de las rutas (dentro del router y de los contextos de la app):
@@ -32,19 +37,31 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
   const modoRef = useRef(modo);
   modoRef.current = modo;
   const sesionIdRef = useRef(crypto.randomUUID());
+  // Ultima tanda de acciones del servidor que la pantalla ya aplico: viaja con la foto de lo marcado (ver contextoCompra.ts).
+  const [versionUi, setVersionUi] = useState(0);
 
-  const manejarUi = useUiActionHandler(modoRef);
+  const manejarUi = useUiActionHandler(modoRef, setVersionUi);
   const voz = useVoiceSession({
     rol: usuario?.rol ?? 'cliente',
     token,
     sesionId: sesionIdRef.current,
     onEvento: (evento) => {
-      if (evento.type === 'ui_action') manejarUi(evento.acciones);
+      if (evento.type === 'ui_action') manejarUi(evento.acciones, evento.v);
     },
   });
-  const { iniciar, terminar } = voz;
+  const { iniciar, terminar, enviarContexto } = voz;
   const { cerrarTodas, cerrar } = ventanas;
   const { state: cine } = useCine();
+
+  // El agente no ve lo que el cliente marca TOCANDO la pantalla: se le cuenta (solo ids) cada vez que cambia, y al abrirse la conversacion.
+  // Va con la version de lo ultimo que el servidor le mando y la pantalla ya aplico: asi el servidor descarta una foto de ANTES de un cambio suyo.
+  const conversando = voz.estado === 'escuchando' || voz.estado === 'pensando' || voz.estado === 'hablando';
+  const claveContexto = JSON.stringify(contextoDeCine(cine));
+  useEffect(() => {
+    if (!conversando || usuario?.rol !== 'cliente') return undefined;
+    const id = setTimeout(() => enviarContexto(versionUi, JSON.parse(claveContexto) as ContextoCompra), PAUSA_ENVIO_CONTEXTO_MS);
+    return () => clearTimeout(id);
+  }, [conversando, usuario?.rol, claveContexto, versionUi, enviarContexto]);
 
   // La entrada digital es el comprobante de la compra TERMINADA: cuando la compra se reinicia (volver al inicio, empezar
   // otra) ya no corresponde y no debe quedar flotando sobre lo que sigue.
@@ -69,6 +86,7 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
     if (rolAnterior.current !== usuario?.rol) {
       rolAnterior.current = usuario?.rol;
       sesionIdRef.current = crypto.randomUUID();
+      setVersionUi(0); // conversacion nueva: el servidor empieza a contar de cero
     }
   }, [usuario?.rol]);
 

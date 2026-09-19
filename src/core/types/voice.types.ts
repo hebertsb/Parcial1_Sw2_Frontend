@@ -64,6 +64,10 @@ export type UiAction =
   | { tipo: 'compra.candybar'; items: ItemCandyBarSeleccionado[] }
   | { tipo: 'compra.completada'; venta: Venta | null }
   | { tipo: 'compra.reiniciar' }
+  /** Saca la pelicula y lo que depende de ella (funcion, butacas); la dulceria se queda. */
+  | { tipo: 'compra.quitar_pelicula' }
+  /** Suelta la funcion y las butacas y deja la pelicula (cambio de horario). */
+  | { tipo: 'compra.quitar_funcion' }
   | { tipo: 'admin.abrir_tab'; tab: string }
   | { tipo: 'admin.refrescar'; tab: string }
   /** Señala en la consola la fila que el agente acaba de crear o cambiar (cambia de sub-pestaña si hace falta y la centra). */

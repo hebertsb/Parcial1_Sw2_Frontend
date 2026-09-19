@@ -40,6 +40,10 @@ export type CineAction =
   | { type: 'SET_CANDYBAR'; payload: ItemCandyBarSeleccionado[] }
   | { type: 'SET_ESTADO_COMPRA'; payload: EstadoCompra }
   | { type: 'SET_VENTA_CREADA'; payload: Venta }
+  /** Saca la pelicula y todo lo que depende de ella (funcion, sala, butacas); la dulceria se queda (lo usa el agente de voz). */
+  | { type: 'QUITAR_PELICULA' }
+  /** Suelta la funcion y las butacas pero deja la pelicula: cambio de horario (lo usa el agente de voz). */
+  | { type: 'QUITAR_FUNCION' }
   | { type: 'RESETEAR_COMPRA' };
 
 export const initialState: CineState = {
@@ -114,6 +118,30 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
       return { ...state, estadoCompra: action.payload };
     case 'SET_VENTA_CREADA':
       return { ...state, ventaCreada: action.payload };
+    case 'QUITAR_PELICULA':
+      return {
+        ...state,
+        peliculaSeleccionada: null,
+        horarioSeleccionado: null,
+        funcionSeleccionada: null,
+        salaSeleccionada: null,
+        disponibilidad: [],
+        precioUnitario: null,
+        butacasSeleccionadas: [],
+        estadoCompra: 'seleccionando_asientos',
+        ventaCreada: null
+      };
+    case 'QUITAR_FUNCION':
+      return {
+        ...state,
+        horarioSeleccionado: null,
+        funcionSeleccionada: null,
+        salaSeleccionada: null,
+        disponibilidad: [],
+        precioUnitario: null,
+        butacasSeleccionadas: [],
+        estadoCompra: 'seleccionando_asientos'
+      };
     case 'RESETEAR_COMPRA':
       return {
         ...state,

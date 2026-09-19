@@ -46,7 +46,11 @@ const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resol
  * En "Solo Voz" no hay pantalla que mover: ahi solo se actualiza el estado de la compra (asi, si el usuario pasa
  * despues al modo tactil, ya encuentra su carrito) pero no se navega, no se resalta nada ni se abren ventanas.
  */
-export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): (acciones: UiAction[]) => void {
+export function useUiActionHandler(
+  modoRef: MutableRefObject<ModoInteraccion>,
+  /** Se llama cuando termino de aplicar una tanda que traia numero de version (ver `ContextoCompra`). */
+  alAplicar?: (version: number) => void,
+): (acciones: UiAction[], version?: number) => void {
   const navigate = useNavigate();
   const location = useLocation();
   const { dispatch } = useCine();
@@ -89,6 +93,15 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
             ventanas.cerrar('confirmacion');
             ventanas.cerrar('ticket');
             dispatch({ type: 'RESETEAR_COMPRA' });
+            break;
+          case 'compra.quitar_pelicula':
+            ventanas.cerrar('confirmacion'); // el resumen que esperaba "confirmo" era de la pelicula que se saca
+            ventanas.cerrar('ticket');
+            dispatch({ type: 'QUITAR_PELICULA' });
+            break;
+          case 'compra.quitar_funcion':
+            ventanas.cerrar('confirmacion');
+            dispatch({ type: 'QUITAR_FUNCION' });
             break;
 
           // ---- lo que necesita pantalla
@@ -150,9 +163,18 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
     [modoRef, navigate, dispatch, control, ventanas],
   );
 
+  const alAplicarRef = useRef(alAplicar);
+  alAplicarRef.current = alAplicar;
+
   return useCallback(
-    (acciones: UiAction[]) => {
-      colaRef.current = colaRef.current.then(() => ejecutar(acciones)).catch((error) => console.error('[ui_action]', error));
+    (acciones: UiAction[], version?: number) => {
+      colaRef.current = colaRef.current
+        .then(() => ejecutar(acciones))
+        .catch((error) => console.error('[ui_action]', error))
+        // Aunque una accion falle, la tanda ya "paso": el servidor tiene que saber que la pantalla llego a esta version.
+        .then(() => {
+          if (version !== undefined) alAplicarRef.current?.(version);
+        });
     },
     [ejecutar],
   );

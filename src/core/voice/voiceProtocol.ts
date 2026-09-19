@@ -16,17 +16,33 @@ export type EventoServidor =
   | { type: 'state'; value: EstadoServidor }
   | { type: 'vad'; hablando: boolean }
   | { type: 'transcript'; text: string }
-  /** Que debe hacer la pantalla; llega ANTES del `reply` para que la interfaz se mueva mientras el agente habla. */
-  | { type: 'ui_action'; acciones: UiAction[] }
+  /**
+   * Que debe hacer la pantalla; llega ANTES del `reply` para que la interfaz se mueva mientras el agente habla.
+   * `v` numera la tanda: la pantalla lo devuelve en su `contexto` cuando ya la aplico (un agente viejo no lo manda).
+   */
+  | { type: 'ui_action'; acciones: UiAction[]; v?: number }
   | { type: 'reply'; texto: string; tipo: VoiceResponseType; datos?: unknown; accion_propuesta?: AccionPropuesta }
   | { type: 'metrics'; stt_ms: number; llm_ms: number; primer_audio_ms: number }
   | { type: 'interrupted' }
   | { type: 'error'; message: string };
 
+/**
+ * Lo que el cliente tiene MARCADO en la pantalla, solo con ids (el agente resuelve el resto contra el catalogo): asi el agente se
+ * entera de lo que se marco TOCANDO ("¿que pelicula tengo seleccionada?", "eliminame la pelicula"). Ver estado_compra.py.
+ */
+export interface ContextoCompra {
+  idPelicula: number | null;
+  idFuncion: number | null;
+  asientos: { id: string; idAsiento: number }[];
+  dulceria: { idProducto: number; cantidad: number }[];
+}
+
 export type MensajeCliente =
   | { type: 'hello'; rol: 'cliente' | 'administrador'; sesion_id: string; token: string | null; barge_in: boolean }
   | { type: 'text'; text: string }
   | { type: 'interrupt' }
+  /** La foto de lo marcado en pantalla + la version de la ultima tanda de acciones del servidor que ya aplico. No es un turno. */
+  | { type: 'contexto'; v: number; compra: ContextoCompra }
   | { type: 'bye' };
 
 /** Lo que las pantallas muestran del ultimo turno (la misma forma que ya usaban con /voice-chat, sin el audio). */

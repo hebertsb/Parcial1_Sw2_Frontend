@@ -5,6 +5,7 @@ import { PlaybackQueue } from './playbackQueue';
 import {
   leerAudioDelServidor,
   TASA_CAPTURA_HZ,
+  type ContextoCompra,
   type EventoServidor,
   type MensajeCliente,
   type ResultadoVoz,
@@ -72,6 +73,8 @@ export interface SesionVoz {
   interrumpir: () => void;
   /** Entrada escrita: misma logica que la voz, sin reconocimiento. */
   enviarTexto: (texto: string) => void;
+  /** Le cuenta al agente lo que el cliente tiene marcado en pantalla (ver `ContextoCompra`). No es un turno: no se contesta. */
+  enviarContexto: (version: number, compra: ContextoCompra) => void;
 }
 
 // Reconectar: el agente tarda ~15 s en volver a levantar (carga Whisper y Piper), asi que se insiste ese tiempo antes de rendirse.
@@ -411,6 +414,11 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     [enviar],
   );
 
+  const enviarContexto = useCallback(
+    (version: number, compra: ContextoCompra) => enviar({ type: 'contexto', v: version, compra }),
+    [enviar],
+  );
+
   // Al desmontar la pantalla se cierra todo (microfono incluido).
   useEffect(() => terminar, [terminar]);
 
@@ -470,5 +478,6 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     silenciar,
     interrumpir,
     enviarTexto,
+    enviarContexto,
   };
 }
