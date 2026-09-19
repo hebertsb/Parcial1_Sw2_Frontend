@@ -57,12 +57,6 @@ export const Layout = () => {
     });
   };
 
-  const irAModoVoz = () =>
-    requireAuth(() => {
-      setModo('voz');
-      navigate('/voz');
-    });
-
   /**
    * Antes estos 3 botones tenían el mismo estilo que "Cartelera" (que sí navega)
    * pero no tenían `onClick` — parecían clickeables sin serlo. Ahora sí navegan,
@@ -80,9 +74,11 @@ export const Layout = () => {
 
   const showTopModeSwitcher = PATHS_WITH_TOP_SWITCHER.includes(location.pathname);
   const showBottomHud = PATHS_WITH_BOTTOM_HUD.includes(location.pathname);
+  // La barra inferior solo existe con una compra en curso (ver BottomHUD): solo entonces se reserva su espacio abajo.
+  const hayBarraCompra = showBottomHud && !!state.peliculaSeleccionada && state.estadoCompra !== 'completado';
 
   return (
-    <div className={`bg-surface-container-lowest text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col ${location.pathname === '/cartelera' || location.pathname === '/compra' ? 'pb-32' : ''}`}>
+    <div className={`bg-surface-container-lowest text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col ${hayBarraCompra ? 'pb-32' : ''}`}>
       <header className="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
         <div className="h-20 w-full px-space-lg flex items-center justify-between gap-space-md">
           <div className="flex items-center gap-space-lg">
@@ -222,7 +218,7 @@ export const Layout = () => {
           {(showTopModeSwitcher || interactionMode === 'hibrido') && (
             <div className="sticky top-20 z-20 bg-surface-container-lowest">
               {showTopModeSwitcher && <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} />}
-              {interactionMode === 'hibrido' && <VoiceStrip voz={voz} onCerrar={() => setModo('tactil')} />}
+              {interactionMode === 'hibrido' && <VoiceStrip voz={voz} />}
             </div>
           )}
           <Outlet />
@@ -248,7 +244,7 @@ export const Layout = () => {
         </div>
       </footer>
 
-      {showBottomHud && <BottomHUD onVoiceMode={irAModoVoz} modo={interactionMode} />}
+      {showBottomHud && <BottomHUD />}
     </div>
   );
 };

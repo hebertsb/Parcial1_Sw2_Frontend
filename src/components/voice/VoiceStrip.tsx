@@ -3,13 +3,12 @@ import type { SesionVoz } from '../../core/voice/useVoiceSession';
 
 interface VoiceStripProps {
   voz: SesionVoz;
-  onCerrar: () => void;
 }
 
 const ETIQUETA_ESTADO = {
   apagada: 'Tocá el micrófono para conversar',
   conectando: 'Conectando…',
-  escuchando: 'Escuchando — hablá cuando quieras',
+  escuchando: 'Escucha activa — hablá cuando quieras',
   pensando: 'Procesando…',
   hablando: 'Lumen AI responde — podés interrumpir',
   error: 'Conversación detenida — tocá el micrófono',
@@ -18,13 +17,14 @@ const ETIQUETA_ESTADO = {
 const N_BARRAS = 5;
 
 /**
- * Panel de voz de "Voz + UI Dinamica": una franja FIJA debajo del selector de modo, donde se ve en vivo lo que se
- * entiende (izquierda) y lo que contesta Lumen (derecha) mientras la app de abajo se mueve sola. No tapa nada de la app.
+ * Panel de voz de "Voz + UI Dinamica": una sola franja continua pegada al selector de modo (misma banda de fondo), sin
+ * cortes. A la izquierda, sobre la franja, lo que se entiende (microfono, ecualizador y la frase); a la derecha, en una
+ * tarjeta hundida, lo que contesta Lumen. La app de abajo queda a la vista y se mueve sola mientras se habla.
  *
- * Despues de cada intercambio, cuando el agente termina de hablar, vuelve solo a "escuchando" (ver `SesionVoz.turno`)
- * en vez de quedarse con la respuesta anterior.
+ * Cuando el agente termina de hablar, a los pocos segundos vuelve solo a "escuchando" (ver `SesionVoz.turno`) en vez
+ * de quedarse con la respuesta anterior. Para cerrarlo se usa el selector de modo de arriba, no un boton propio.
  */
-export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
+export const VoiceStrip = ({ voz }: VoiceStripProps) => {
   const orbeRef = useRef<HTMLDivElement | null>(null);
   const barrasRef = useRef<Array<HTMLSpanElement | null>>([]);
   const estadoRef = useRef(voz.estado);
@@ -42,8 +42,8 @@ export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
       const nivel = silenciadoRef.current ? 0 : Math.min(voz.nivelMicRef.current * 7, 1);
       const orbe = orbeRef.current;
       if (orbe) {
-        orbe.style.transform = `scale(${1 + nivel * 0.22})`;
-        orbe.style.opacity = String(0.35 + nivel * 0.5);
+        orbe.style.transform = `scale(${1 + nivel * 0.28})`;
+        orbe.style.opacity = String(0.3 + nivel * 0.55);
       }
       const t = performance.now() / 160;
       const habla = estadoRef.current === 'hablando';
@@ -71,21 +71,28 @@ export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
   // Un fallo de la conversacion (se cayo la conexion, no hay microfono) se queda; el de un turno se va con el turno.
   const error = voz.estado === 'error' ? voz.error : voz.turno.error;
 
-  const colorOrbe = voz.silenciado || voz.estado === 'error'
-    ? 'bg-error text-on-error'
-    : voz.estado === 'escuchando'
-      ? 'bg-secondary text-on-secondary'
-      : voz.estado === 'hablando'
-        ? 'bg-primary-container text-on-primary-container'
+  // Ambar mientras escucha (como en la interfaz original); cian cuando habla Lumen; rojo si esta pausado o fallo.
+  const esRojo = voz.silenciado || voz.estado === 'error';
+  const esAmbar = !esRojo && voz.estado === 'escuchando';
+  const esCian = !esRojo && voz.estado === 'hablando';
+  const colorOrbe = esRojo
+    ? 'bg-error text-on-error shadow-[0_0_28px_rgba(255,180,171,0.35)]'
+    : esAmbar
+      ? 'bg-primary-container text-on-primary-container shadow-[0_0_30px_rgba(245,158,11,0.5)]'
+      : esCian
+        ? 'bg-secondary text-on-secondary shadow-[0_0_30px_rgba(76,215,246,0.45)]'
         : 'bg-surface-container-highest text-on-surface';
+  const colorAro = esCian ? 'bg-secondary/50' : esRojo ? 'bg-error/40' : esAmbar ? 'bg-primary-container/50' : 'bg-on-surface/20';
 
-  const chip = voz.estado === 'pensando'
-    ? { texto: 'Procesando', clase: 'bg-primary-container/25 text-primary animate-pulse' }
-    : voz.estado === 'hablando'
-      ? { texto: 'Respondiendo', clase: 'bg-tertiary/15 text-tertiary' }
-      : error
-        ? { texto: 'No se pudo', clase: 'bg-error-container text-on-error-container' }
-        : null;
+  const chip = error
+    ? { texto: 'No se pudo', clase: 'bg-error-container text-on-error-container' }
+    : voz.estado === 'pensando'
+      ? { texto: 'Procesando', clase: 'bg-primary-container/20 text-primary animate-pulse' }
+      : voz.estado === 'hablando'
+        ? { texto: 'Respondiendo', clase: 'bg-tertiary/15 text-tertiary' }
+        : voz.turno.respuesta
+          ? { texto: 'Listo', clase: 'bg-tertiary/15 text-tertiary' }
+          : null;
 
   const alOrbe = () => {
     if (apagada) void voz.iniciar();
@@ -101,23 +108,31 @@ export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
   };
 
   return (
-    <section data-testid="voice-strip" aria-label="Asistente de voz" className="w-full px-space-lg pb-space-sm bg-surface-container-lowest">
-      <div className="flex flex-col lg:flex-row items-stretch gap-space-sm">
-        {/* Lo que se le entiende al usuario */}
-        <div className="flex items-center gap-space-md rounded-2xl bg-surface-container px-space-md py-space-xs shadow-md lg:basis-5/12 min-w-0 h-24 overflow-hidden">
+    <section
+      data-testid="voice-strip"
+      aria-label="Asistente de voz"
+      className="w-full px-space-lg pt-space-xs pb-space-md bg-surface-container-low/60 backdrop-blur-md border-b border-surface-container-high/50"
+    >
+      <div className="flex flex-col lg:flex-row lg:items-center gap-space-md lg:gap-space-xl">
+        {/* Lo que se le entiende al usuario: sobre la franja, sin tarjeta propia */}
+        <div className="flex items-center gap-space-md lg:basis-5/12 min-w-0">
           <button
             type="button"
             onClick={alOrbe}
             aria-label={apagada ? 'Iniciar la conversación' : voz.estado === 'hablando' ? 'Interrumpir a Lumen' : voz.silenciado ? 'Reactivar el micrófono' : 'Pausar el micrófono'}
-            className={`relative w-14 h-14 shrink-0 rounded-full flex items-center justify-center transition-colors ${colorOrbe}`}
+            className={`relative w-16 h-16 shrink-0 rounded-full flex items-center justify-center transition-all ${colorOrbe}`}
           >
-            <div ref={orbeRef} className="absolute inset-0 rounded-full bg-secondary/50 pointer-events-none" />
-            <span className="relative material-symbols-outlined text-[28px]">
+            <div ref={orbeRef} className={`absolute inset-0 rounded-full pointer-events-none ${colorAro}`} />
+            <span className="relative material-symbols-outlined text-[30px]">
               {apagada ? 'mic' : voz.silenciado ? 'mic_off' : voz.estado === 'hablando' ? 'graphic_eq' : voz.estado === 'pensando' ? 'more_horiz' : 'mic'}
             </span>
+            {/* Punto de conexion: verde con la conversacion en marcha */}
+            {!apagada && !voz.reconectando && (
+              <span aria-hidden className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-tertiary ring-2 ring-surface-container-low shadow-[0_0_8px_rgba(86,229,169,0.8)]" />
+            )}
           </button>
           <div className="flex-1 min-w-0 flex flex-col gap-space-2xs">
-            <div className="flex items-center gap-space-xs">
+            <div className="flex items-center gap-space-sm">
               <span className="font-label-code text-label-code text-secondary uppercase tracking-wider truncate" data-testid="strip-estado">
                 {etiqueta}
               </span>
@@ -128,29 +143,31 @@ export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
                     ref={(el) => {
                       barrasRef.current[i] = el;
                     }}
-                    className="w-[3px] h-4 rounded-full bg-secondary origin-center"
+                    className="w-[3px] h-4 rounded-full bg-primary-container origin-center"
                   />
                 ))}
               </span>
             </div>
-            {voz.turno.transcript ? (
-              <p className="font-body-md text-body-md text-on-surface italic line-clamp-2" data-testid="strip-transcript">
-                “{voz.turno.transcript}”
-              </p>
-            ) : (
-              <p className="font-body-md text-body-md text-on-surface-variant/70 line-clamp-2" data-testid="strip-transcript-vacio">
-                Decime qué querés hacer…
-              </p>
-            )}
+            <div className="h-12 flex items-center overflow-hidden">
+              {voz.turno.transcript ? (
+                <p className="font-body-lg text-body-lg text-on-surface italic line-clamp-2" data-testid="strip-transcript">
+                  “{voz.turno.transcript}”
+                </p>
+              ) : (
+                <p className="font-body-lg text-body-lg text-on-surface-variant/60 line-clamp-2" data-testid="strip-transcript-vacio">
+                  Decime qué querés hacer…
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Lo que contesta el agente */}
-        <div className="flex items-start gap-space-md rounded-2xl bg-surface-container px-space-md py-space-xs shadow-md lg:basis-7/12 min-w-0 h-24 overflow-hidden">
-          <div className="w-12 h-12 mt-space-2xs shrink-0 rounded-xl bg-surface-container-highest text-secondary flex items-center justify-center">
-            <span className="material-symbols-outlined text-[26px]">smart_toy</span>
+        {/* Lo que contesta el agente: tarjeta hundida en la misma franja */}
+        <div className="flex items-start gap-space-md lg:basis-7/12 min-w-0 h-24 rounded-2xl bg-surface-container-lowest/80 border border-surface-container-high/40 shadow-inner px-space-md py-space-sm">
+          <div className="w-11 h-11 shrink-0 rounded-xl bg-surface-container-high text-secondary flex items-center justify-center">
+            <span className="material-symbols-outlined text-[24px]">smart_toy</span>
           </div>
-          <div className="flex-1 min-w-0 h-full flex flex-col gap-space-2xs py-space-2xs">
+          <div className="flex-1 min-w-0 h-full flex flex-col gap-space-2xs">
             <div className="flex items-center gap-space-xs shrink-0">
               <span className="font-label-code text-label-code text-secondary uppercase tracking-wider truncate">Agente Lumen AI (voz)</span>
               {chip && <span className={`px-space-xs py-[1px] rounded-md font-label-code text-label-code ${chip.clase}`}>{chip.texto}</span>}
@@ -165,38 +182,27 @@ export const VoiceStrip = ({ voz, onCerrar }: VoiceStripProps) => {
                   {voz.turno.respuesta}
                 </p>
               ) : (
-                <p className="font-body-sm text-body-sm text-on-surface-variant/70" data-testid="strip-respuesta-vacio">
+                <p className="font-body-sm text-body-sm text-on-surface-variant/60" data-testid="strip-respuesta-vacio">
                   Lista para ayudarte: pedime la cartelera, entradas o algo de la dulcería.
                 </p>
               )}
             </div>
           </div>
-        </div>
-
-        {/* Controles */}
-        <div className="flex lg:flex-col items-center justify-center gap-space-2xs shrink-0">
+          {/* Escribir en vez de hablar (por si el ambiente es ruidoso): no cambia de modo, solo abre un campo de texto */}
           <button
             type="button"
             onClick={() => setEscribiendo((v) => !v)}
             aria-label="Escribir en vez de hablar"
             aria-pressed={escribiendo}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${escribiendo ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'}`}
+            className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${escribiendo ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-variant'}`}
           >
             <span className="material-symbols-outlined text-[20px]">keyboard</span>
-          </button>
-          <button
-            type="button"
-            onClick={onCerrar}
-            aria-label="Cerrar el asistente de voz"
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
       </div>
 
       {escribiendo && (
-        <form onSubmit={enviar} className="mt-space-xs flex items-center gap-space-xs rounded-full bg-surface-container px-space-md py-space-xs">
+        <form onSubmit={enviar} className="mt-space-sm flex items-center gap-space-xs rounded-full bg-surface-container-lowest/80 border border-surface-container-high/40 px-space-md py-space-xs">
           <input
             autoFocus
             value={texto}

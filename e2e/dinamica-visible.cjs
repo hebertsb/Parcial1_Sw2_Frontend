@@ -76,7 +76,12 @@ function verificar(nombre, ok, detalle = '') {
   };
   const pantalla = async () => (await page.evaluate(() => document.body.innerText));
 
-  console.log('== 1) Entro a "Voz + UI Dinámica" desde el INICIO ==');
+  console.log('== 0) Sin compra en curso la pantalla queda limpia: el modo se cambia SOLO con el selector de arriba ==');
+  await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
+  verificar('no hay barra inferior (no hay compra en curso)', (await page.getByTestId('barra-compra').count()) === 0);
+  verificar('no hay "Llamar Asistente" ni "Cambiar a Modo Voz Lumina" (el selector de arriba ya cambia de modo)', (await page.getByText('Llamar Asistente').count()) === 0 && (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0);
+
+  console.log('\n== 1) Entro a "Voz + UI Dinámica" desde el INICIO ==');
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click({ timeout: 8000 });
   await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
@@ -84,26 +89,29 @@ function verificar(nombre, ok, detalle = '') {
   let texto = await pantalla();
   verificar('NO aparece la pantalla de Solo Voz', !/Canal de Voz Bidireccional/i.test(texto) && !page.url().endsWith('/voz'), page.url());
   verificar('se sigue viendo el Inicio de la app', /LUMEN/i.test(texto) && page.url().replace(BASE, '') === '/');
-  verificar('la barra inferior NO ofrece pasar a Solo Voz ni repite el panel de voz', (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0 && (await page.getByTestId('voz-ui-activa').count()) === 0);
-  const selector = await page.getByRole('button', { name: /Modo Táctil/ }).boundingBox();
+  verificar('sigue sin haber barra inferior ni botones de cambio de modo abajo', (await page.getByTestId('barra-compra').count()) === 0 && (await page.getByText('Llamar Asistente').count()) === 0 && (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0);
+  const selector = await page.getByTestId('mode-switcher').boundingBox();
   const panel = await page.getByTestId('voice-strip').boundingBox();
-  verificar('el panel de voz queda DEBAJO del selector de modo', !!selector && !!panel && panel.y >= selector.y + selector.height - 2, selector && panel ? `selector y=${Math.round(selector.y)}, panel y=${Math.round(panel.y)}` : '');
+  const ancho = await page.evaluate(() => document.documentElement.clientWidth);
+  verificar('el panel de voz queda DEBAJO del selector de modo', !!selector && !!panel && panel.y >= selector.y + selector.height - 2, selector && panel ? `selector termina en y=${Math.round(selector.y + selector.height)}, panel empieza en y=${Math.round(panel.y)}` : '');
+  verificar('es UNA sola franja pegada al selector: sin huecos y de borde a borde', !!selector && !!panel && Math.abs(panel.y - (selector.y + selector.height)) <= 2 && panel.x <= 1 && panel.width >= ancho - 2, panel ? `x=${Math.round(panel.x)}, ancho=${Math.round(panel.width)} de ${ancho}` : '');
   verificar('no hay un panel flotante abajo (es uno solo, arriba)', (await page.getByTestId('voice-dock').count()) === 0);
-  verificar('recien abierto muestra "escuchando" y los textos en blanco', /Escuchando/i.test(await page.getByTestId('strip-estado').innerText()) && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
+  verificar('recien abierto muestra "escuchando" y los textos en blanco', /Escucha/i.test(await page.getByTestId('strip-estado').innerText()) && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && (await page.getByTestId('strip-respuesta-vacio').count()) === 1);
   await page.screenshot({ path: 'dv1_inicio_con_asistente.png' });
 
   console.log('\n== 2) "Mostrame la cartelera": la pantalla va sola a la cartelera ==');
   await decir('Mostrame la cartelera');
   await page.waitForURL('**/cartelera', { timeout: 10000 }).catch(() => {});
-  await page.waitForSelector('.movie-card', { timeout: 15000 }).catch(() => {});
+  const tTarjetas = Date.now();
+  const llegaron = await page.waitForFunction(() => document.querySelectorAll('.movie-card').length > 0, null, { timeout: 20000 }).then(() => true).catch(() => false);
   verificar('navego a /cartelera sin que nadie toque nada', page.url().endsWith('/cartelera'), page.url());
-  verificar('se ven las peliculas', (await page.locator('.movie-card').count()) > 0, `${await page.locator('.movie-card').count()} tarjetas`);
+  verificar('se ven las peliculas', llegaron, `${await page.locator('.movie-card').count()} tarjetas, ${Date.now() - tTarjetas} ms despues de navegar`);
   verificar('sigue el panel de voz arriba (no cambio a Solo Voz)', (await page.getByTestId('voice-strip').count()) === 1 && !/Canal de Voz Bidireccional/i.test(await pantalla()));
   verificar('mientras responde muestra lo que se le entendio y lo que contesta', (await page.getByTestId('strip-transcript').innerText()).includes('cartelera') && (await page.getByTestId('strip-respuesta').count()) === 1);
   await page.screenshot({ path: 'dv2_cartelera.png' });
   // Cuando el agente termina de hablar el panel vuelve solo a "escuchando": no se queda con la respuesta de la accion anterior.
   await page.waitForSelector('[data-testid="strip-respuesta-vacio"]', { timeout: 40000 }).catch(() => {});
-  verificar('al terminar de hablar el panel VUELVE SOLO a "escuchando" (sin la respuesta vieja)', (await page.getByTestId('strip-respuesta-vacio').count()) === 1 && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && /Escuchando/i.test(await page.getByTestId('strip-estado').innerText()));
+  verificar('al terminar de hablar el panel VUELVE SOLO a "escuchando" (sin la respuesta vieja)', (await page.getByTestId('strip-respuesta-vacio').count()) === 1 && (await page.getByTestId('strip-transcript-vacio').count()) === 1 && /Escucha/i.test(await page.getByTestId('strip-estado').innerText()));
 
   console.log(`\n== 3) "Quiero entradas para ${PELICULA}": se VE la eleccion y despues pasa a los asientos ==`);
   await page.evaluate(() => { window.__linea.length = 0; });
@@ -123,6 +131,7 @@ function verificar(nombre, ok, detalle = '') {
   verificar('se ve el resaltado ANTES de saltar a los asientos', tPelicula !== undefined && tAsientos !== undefined && tPelicula < tAsientos && (tAsientos - tPelicula) >= 900, tPelicula !== undefined && tAsientos !== undefined ? `se ve ${tAsientos - tPelicula} ms antes de pasar` : '');
   const cine = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lumen_cine_state') || '{}'));
   verificar('despues quedo en los asientos con la funcion elegida', page.url().endsWith('/compra') && cine.peliculaSeleccionada?.titulo === PELICULA && !!cine.funcionSeleccionada?.idFuncion, `${cine.peliculaSeleccionada?.titulo} funcion ${cine.funcionSeleccionada?.idFuncion}`);
+  verificar('ahora SI hay barra inferior (hay compra en curso) y es solo el resumen y el boton de avanzar', (await page.getByTestId('barra-compra').count()) === 1 && (await page.getByTestId('barra-compra').innerText()).includes('Ir al Candy Bar') && (await page.getByText('Llamar Asistente').count()) === 0 && (await page.getByText('Cambiar a Modo Voz Lumina').count()) === 0);
   await page.screenshot({ path: 'dv4_asientos.png' });
 
   console.log('\n== 4) Ya en los asientos, cambiar de funcion NO lo saca de ahi ==');
@@ -158,6 +167,7 @@ function verificar(nombre, ok, detalle = '') {
   await page.waitForTimeout(400);
   verificar('al completarse la compra la confirmacion ("Deci confirmo") se CIERRA sola', (await page.locator('[data-ventana="Confirmá tu compra"]').count()) === 0);
   verificar('y queda la entrada digital a la vista', (await page.locator('[data-ventana="Entrada digital"]').count()) === 1);
+  verificar('la barra inferior desaparece: ya no hay nada que "Confirmar y Pagar"', (await page.getByTestId('barra-compra').count()) === 0);
   await page.screenshot({ path: 'dv6_ticket_sin_confirmacion.png' });
   await page.evaluate(() => window.__lumen.aplicarUi([{ tipo: 'navegar', destino: 'cartelera' }]));
   await page.waitForTimeout(600);

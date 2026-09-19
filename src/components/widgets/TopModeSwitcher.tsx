@@ -10,7 +10,7 @@ interface TopModeSwitcherProps {
  */
 export const TopModeSwitcher = ({ mode, onChangeMode }: TopModeSwitcherProps) => {
   return (
-    <div className="flex flex-col w-full bg-surface-container-lowest">
+    <div data-testid="mode-switcher" className="flex flex-col w-full bg-surface-container-lowest">
       {/* Status Strip & Mode Toggle Anchor */}
       <div className="w-full px-space-lg py-space-sm flex flex-wrap items-center justify-between gap-space-md bg-surface-container-low/60 backdrop-blur-md">
         <div className="flex items-center gap-space-sm">

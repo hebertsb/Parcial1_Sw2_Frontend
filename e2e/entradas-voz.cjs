@@ -68,11 +68,11 @@ if (!SILENCIO) throw new Error('Falta SILENCIO_WAV (ruta a un WAV de silencio, v
   v('pasar de hibrido a solo voz NO reabre la conversacion (misma sesion)', listosDespues === listosAntes, `ready: ${listosAntes} -> ${listosDespues}`);
   v('sigue activa', (await page.evaluate(() => window.__lumen.voz.activa)) === true);
 
-  console.log('\n== D) Cerrar el panel de voz (x) vuelve al modo tactil ==');
+  console.log('\n== D) Elegir "Modo Táctil" en el selector cierra el panel de voz y el micrófono ==');
   await page.goto(BASE + '/cartelera', { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: /Voz \+ UI Din/ }).first().click();
   await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
-  await page.getByRole('button', { name: /Cerrar el asistente de voz/ }).click();
+  await page.getByRole('button', { name: /Modo Táctil/ }).click(); // el panel no tiene boton propio para cerrarse: se usa el selector
   await page.waitForTimeout(600);
   v('el panel de voz desaparece', await page.locator('[data-testid="voice-strip"]').count() === 0);
   v('modo tactil y mic cerrado', (await modo()) === 'tactil' && (await page.evaluate(() => window.__lumen.voz.estado)) === 'apagada');

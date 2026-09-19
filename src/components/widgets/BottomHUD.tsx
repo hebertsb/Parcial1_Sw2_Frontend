@@ -5,13 +5,12 @@ import { crearVenta } from '../../api/ventas.api';
 import { crearPago } from '../../api/pagos.api';
 import { ApiError } from '../../api/client';
 
-interface BottomHUDProps {
-  onVoiceMode: () => void;
-  /** Modo de interaccion actual: en "Voz + UI Dinamica" este boton no debe llevar a Solo Voz (taparia la app que se esta usando). */
-  modo?: 'tactil' | 'hibrido' | 'voz';
-}
-
-export const BottomHUD = ({ onVoiceMode, modo = 'tactil' }: BottomHUDProps) => {
+/**
+ * Barra inferior de la compra: resumen de lo elegido (película, entradas, subtotal) y el botón para avanzar.
+ * Solo aparece cuando hay una compra en curso. El cambio entre Táctil / Voz + UI Dinámica / Solo Voz se hace únicamente
+ * con el selector de arriba (TopModeSwitcher): acá no se repite, y menos con botones que llevaban a otra pantalla.
+ */
+export const BottomHUD = () => {
   const { state, dispatch } = useCine();
   const { token } = useAuth();
   const [confirmando, setConfirmando] = useState(false);
@@ -92,8 +91,12 @@ export const BottomHUD = ({ onVoiceMode, modo = 'tactil' }: BottomHUDProps) => {
     (state.estadoCompra === 'seleccionando_asientos' && totalTickets === 0) ||
     (state.estadoCompra === 'pago' && (confirmando || !state.funcionSeleccionada));
 
+  // Sin una compra en curso (o ya terminada: no queda nada que avanzar, y un "Confirmar y Pagar" sobrevivía a la compra
+  // ya pagada) no hay nada que mostrar: la pantalla queda limpia (Layout.tsx tampoco reserva el espacio).
+  if (!state.peliculaSeleccionada || state.estadoCompra === 'completado') return null;
+
   return (
-    <aside className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.8)] px-space-lg py-space-sm border-t border-surface-container">
+    <aside data-testid="barra-compra" className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.8)] px-space-lg py-space-sm border-t border-surface-container">
       {errorVenta && (
         <div className="max-w-[1720px] mx-auto mb-space-xs px-space-md py-space-2xs rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-center gap-space-xs">
           <span className="material-symbols-outlined text-[18px]">error</span>
@@ -101,69 +104,46 @@ export const BottomHUD = ({ onVoiceMode, modo = 'tactil' }: BottomHUDProps) => {
         </div>
       )}
       <div className="max-w-[1720px] mx-auto flex items-center justify-between gap-space-md">
-        {/* Left: Mode Switcher & Kiosk Assistance */}
-        <div className="flex items-center gap-space-sm">
-          <button className="h-touch-target-kiosk px-space-md rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center gap-space-xs font-label-lg text-label-lg transition-all active:scale-95 shadow-md">
-            <span className="material-symbols-outlined text-primary text-[24px]">support_agent</span>
-            <span className="hidden sm:inline">Llamar Asistente</span>
-          </button>
-          {/* En "Voz + UI Dinámica" el panel de voz ya está arriba, debajo del selector: acá no se repite ni se ofrece
-              pasar a Solo Voz (taparía la app que se está usando). */}
-          {modo !== 'hibrido' && (
-            <button onClick={onVoiceMode} className="h-touch-target-kiosk px-space-md rounded-xl bg-secondary-container/20 hover:bg-secondary-container/30 text-secondary flex items-center gap-space-xs font-label-lg text-label-lg transition-all active:scale-95">
-              <div className="w-3 h-3 rounded-full bg-secondary animate-ping"></div>
-              <span className="material-symbols-outlined text-[22px]">mic</span>
-              <span className="hidden md:inline">Cambiar a Modo Voz Lumina</span>
-            </button>
-          )}
-        </div>
-
-        {/* Center: Selection Status Counter Display */}
-        {state.peliculaSeleccionada && (
-          <div className="hidden lg:flex items-center gap-space-md px-space-lg py-space-xs rounded-xl bg-surface-container shadow-inner">
-            <div className="flex items-center gap-space-xs">
-              <span className="material-symbols-outlined text-primary text-[22px]">movie</span>
-              <div className="flex flex-col">
-                <span className="font-label-code text-label-code text-on-surface-variant uppercase">Película activa</span>
-                <span className="font-label-md text-label-md text-on-surface font-bold">{state.peliculaSeleccionada.titulo}</span>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-surface-variant"></div>
-            <div className="flex items-center gap-space-xs">
-              <span className="material-symbols-outlined text-secondary text-[22px]">chair</span>
-              <div className="flex flex-col">
-                <span className="font-label-code text-label-code text-on-surface-variant uppercase">Selección</span>
-                <span className="font-label-md text-label-md text-primary font-bold">{totalTickets} Entradas</span>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-surface-variant"></div>
-            <div className="flex flex-col text-right">
-              <span className="font-label-code text-label-code text-on-surface-variant uppercase">Subtotal</span>
-              <span className="font-headline-sm text-headline-sm text-primary">{total.toFixed(2)} Bs</span>
+        {/* Left: Selection Status Counter Display */}
+        <div className="hidden lg:flex items-center gap-space-md px-space-lg py-space-xs rounded-xl bg-surface-container shadow-inner">
+          <div className="flex items-center gap-space-xs">
+            <span className="material-symbols-outlined text-primary text-[22px]">movie</span>
+            <div className="flex flex-col">
+              <span className="font-label-code text-label-code text-on-surface-variant uppercase">Película activa</span>
+              <span className="font-label-md text-label-md text-on-surface font-bold">{state.peliculaSeleccionada.titulo}</span>
             </div>
           </div>
-        )}
+          <div className="w-px h-8 bg-surface-variant"></div>
+          <div className="flex items-center gap-space-xs">
+            <span className="material-symbols-outlined text-secondary text-[22px]">chair</span>
+            <div className="flex flex-col">
+              <span className="font-label-code text-label-code text-on-surface-variant uppercase">Selección</span>
+              <span className="font-label-md text-label-md text-primary font-bold">{totalTickets} Entradas</span>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-surface-variant"></div>
+          <div className="flex flex-col text-right">
+            <span className="font-label-code text-label-code text-on-surface-variant uppercase">Subtotal</span>
+            <span className="font-headline-sm text-headline-sm text-primary">{total.toFixed(2)} Bs</span>
+          </div>
+        </div>
 
         {/* Right: Main Tactile Action Button */}
-        <div className="flex items-center gap-space-sm">
-          {state.peliculaSeleccionada && (
-            <button className="h-touch-target-kiosk px-space-md rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center gap-space-xs font-label-lg text-label-lg transition-all relative">
-              <span className="material-symbols-outlined text-[24px]">shopping_bag</span>
-              <span className="w-6 h-6 rounded-full bg-primary text-on-primary font-bold flex items-center justify-center font-label-code text-label-code shadow-md">
-                {totalTickets + state.candyBarSeleccionado.reduce((a, b) => a + b.cantidad, 0)}
-              </span>
-            </button>
-          )}
-          {state.peliculaSeleccionada && (
-            <button 
-              onClick={handleNextStep}
-              disabled={isNextDisabled}
-              className={`h-touch-target-kiosk px-space-xl rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-space-sm transition-transform ${isNextDisabled ? 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed' : 'bg-primary-container text-on-primary-container shadow-xl shadow-primary/30 active:scale-95'}`}
-            >
-              <span>{getNextStepText()}</span>
-              <span className="material-symbols-outlined text-[24px]">arrow_forward</span>
-            </button>
-          )}
+        <div className="flex items-center gap-space-sm ml-auto">
+          <button className="h-touch-target-kiosk px-space-md rounded-xl bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center gap-space-xs font-label-lg text-label-lg transition-all relative">
+            <span className="material-symbols-outlined text-[24px]">shopping_bag</span>
+            <span className="w-6 h-6 rounded-full bg-primary text-on-primary font-bold flex items-center justify-center font-label-code text-label-code shadow-md">
+              {totalTickets + state.candyBarSeleccionado.reduce((a, b) => a + b.cantidad, 0)}
+            </span>
+          </button>
+          <button
+            onClick={handleNextStep}
+            disabled={isNextDisabled}
+            className={`h-touch-target-kiosk px-space-xl rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-space-sm transition-transform ${isNextDisabled ? 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed' : 'bg-primary-container text-on-primary-container shadow-xl shadow-primary/30 active:scale-95'}`}
+          >
+            <span>{getNextStepText()}</span>
+            <span className="material-symbols-outlined text-[24px]">arrow_forward</span>
+          </button>
         </div>
       </div>
     </aside>
