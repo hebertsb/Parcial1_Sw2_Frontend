@@ -20,6 +20,15 @@ export interface ResaltadoCartelera {
   n: number;
 }
 
+/** Cosas de la consola de administrador que el agente puede señalar: la fila que acaba de crear o cambiar. */
+export type EntidadAdmin = 'pelicula' | 'funcion' | 'promocion' | 'precio';
+
+export interface ResaltadoAdmin {
+  entidad: EntidadAdmin;
+  id: number;
+  n: number;
+}
+
 /** Cuanto se queda resaltado (ms): lo justo para verlo mientras el agente habla y despues se apaga solo. */
 const DURACION_RESALTADO_MS = 12000;
 
@@ -32,6 +41,8 @@ interface UiControl {
   filtrarCartelera: (filtro: { busqueda?: string | null; dia?: string | null }) => void;
   resaltado: ResaltadoCartelera | null;
   resaltarCartelera: (ids: number[], idFuncion?: number | null) => void;
+  resaltadoAdmin: ResaltadoAdmin | null;
+  resaltarAdmin: (entidad: EntidadAdmin, id: number) => void;
 }
 
 const UiControlContext = createContext<UiControl | undefined>(undefined);
@@ -41,7 +52,9 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
   const [refrescos, setRefrescos] = useState<Record<string, number>>({});
   const [filtroCartelera, setFiltroCartelera] = useState<FiltroCartelera | null>(null);
   const [resaltado, setResaltado] = useState<ResaltadoCartelera | null>(null);
+  const [resaltadoAdmin, setResaltadoAdmin] = useState<ResaltadoAdmin | null>(null);
   const temporizadorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const temporizadorAdminRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pedirAdminTab = useCallback((tab: string) => setSolicitudAdminTab((prev) => ({ tab, n: (prev?.n ?? 0) + 1 })), []);
   const refrescar = useCallback((tab: string) => setRefrescos((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 })), []);
@@ -56,11 +69,22 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
     if (temporizadorRef.current) clearTimeout(temporizadorRef.current);
     temporizadorRef.current = setTimeout(() => setResaltado(null), DURACION_RESALTADO_MS);
   }, []);
-  useEffect(() => () => { if (temporizadorRef.current) clearTimeout(temporizadorRef.current); }, []);
+  const resaltarAdmin = useCallback((entidad: EntidadAdmin, id: number) => {
+    setResaltadoAdmin((prev) => ({ entidad, id, n: (prev?.n ?? 0) + 1 }));
+    if (temporizadorAdminRef.current) clearTimeout(temporizadorAdminRef.current);
+    temporizadorAdminRef.current = setTimeout(() => setResaltadoAdmin(null), DURACION_RESALTADO_MS);
+  }, []);
+  useEffect(
+    () => () => {
+      if (temporizadorRef.current) clearTimeout(temporizadorRef.current);
+      if (temporizadorAdminRef.current) clearTimeout(temporizadorAdminRef.current);
+    },
+    [],
+  );
 
   const value = useMemo(
-    () => ({ solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera }),
-    [solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera],
+    () => ({ solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin }),
+    [solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin],
   );
   return <UiControlContext.Provider value={value}>{children}</UiControlContext.Provider>;
 };

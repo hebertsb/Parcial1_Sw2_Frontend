@@ -66,5 +66,7 @@ export type UiAction =
   | { tipo: 'compra.reiniciar' }
   | { tipo: 'admin.abrir_tab'; tab: string }
   | { tipo: 'admin.refrescar'; tab: string }
+  /** Señala en la consola la fila que el agente acaba de crear o cambiar (cambia de sub-pestaña si hace falta y la centra). */
+  | { tipo: 'admin.resaltar'; tab: string; entidad: 'pelicula' | 'funcion' | 'promocion' | 'precio'; id: number }
   | { tipo: 'ventana.abrir'; ventana: TipoVentana; datos: Record<string, unknown> }
   | { tipo: 'ventana.cerrar'; ventana: TipoVentana };

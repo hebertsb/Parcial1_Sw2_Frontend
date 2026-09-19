@@ -130,7 +130,7 @@ function verificar(nombre, ok, detalle = '') {
     console.log('\n== 2) Administrador: reporte y gestion ==');
     await page.goto(BASE + '/admin/console', { waitUntil: 'networkidle' });
     await page.evaluate(() => window.__lumen.setModo('hibrido'));
-    await page.waitForSelector('[data-testid="voice-dock"]', { timeout: 15000 });
+    await page.waitForSelector('[data-testid="voice-strip"]', { timeout: 15000 });
     await page.waitForFunction(() => window.__ev.some((e) => e.type === 'ready'), null, { timeout: 20000 });
     await decir('Mostrame las ventas de esta semana');
     await page.waitForTimeout(800);

@@ -11,6 +11,7 @@ import type { Precio } from '../../core/types/precio.types';
 import { PeliculasPanel } from './PeliculasPanel';
 import { FuncionesPanel } from './FuncionesPanel';
 import { leerEstadoSesion, guardarEstadoSesion } from '../../core/sessionState';
+import { useUiControl } from '../../core/ui/UiControlContext';
 
 type SubTab = 'peliculas' | 'funciones';
 
@@ -53,6 +54,13 @@ export const AdminCartelera = () => {
   useEffect(() => {
     guardarEstadoSesion('lumen_admin_cartelera_subtab', subTab);
   }, [subTab]);
+
+  // Si el agente acaba de crear o cambiar algo, se muestra la sub-pestaña donde esta (y ahi se resalta la fila).
+  const { resaltadoAdmin } = useUiControl();
+  useEffect(() => {
+    if (resaltadoAdmin?.entidad === 'funcion') setSubTab('funciones');
+    else if (resaltadoAdmin?.entidad === 'pelicula') setSubTab('peliculas');
+  }, [resaltadoAdmin]);
 
   return (
     <div className="p-space-xl flex flex-col gap-space-lg">

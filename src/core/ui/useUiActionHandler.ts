@@ -129,6 +129,13 @@ export function useUiActionHandler(modoRef: MutableRefObject<ModoInteraccion>): 
           case 'admin.refrescar':
             if (conPantalla) control.refrescar(accion.tab);
             break;
+          case 'admin.resaltar':
+            if (conPantalla) {
+              control.pedirAdminTab(accion.tab);
+              control.resaltarAdmin(accion.entidad, accion.id);
+              irA(RUTA_ADMIN);
+            }
+            break;
           case 'ventana.abrir':
             if (conPantalla) ventanas.abrir(accion.ventana, accion.datos);
             break;

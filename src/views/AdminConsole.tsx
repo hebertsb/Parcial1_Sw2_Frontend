@@ -10,10 +10,14 @@ import { AdminCartelera } from './admin/AdminCartelera';
 import { AdminSalas } from './admin/AdminSalas';
 import { AdminUsuarios } from './admin/AdminUsuarios';
 import { AdminPreciosPromos } from './admin/AdminPreciosPromos';
-import { AdminVoz } from './admin/AdminVoz';
+import { TopModeSwitcher } from '../components/widgets/TopModeSwitcher';
+import { EstadoConexion } from '../components/widgets/EstadoConexion';
+import { RelojSistema } from '../components/widgets/RelojSistema';
+import { VoiceStrip } from '../components/voice/VoiceStrip';
+import { useVozSesion, type ModoInteraccion } from '../core/voice/VoiceSessionProvider';
 import { AdminDulceria } from './admin/AdminDulceria';
 
-type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'voz' | 'dulceria';
+type AdminTab = 'cartelera' | 'reportes' | 'usuarios' | 'auditoria' | 'promos' | 'salas' | 'dulceria';
 
 const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'cartelera', icon: 'movie', label: 'Cartelera & Funciones' },
@@ -22,9 +26,10 @@ const NAV_ITEMS: { tab: AdminTab; icon: string; label: string }[] = [
   { tab: 'auditoria', icon: 'security_update_good', label: 'Auditoría & Logs' },
   { tab: 'promos', icon: 'sell', label: 'Precios & Promos' },
   { tab: 'salas', icon: 'weekend', label: 'Configuración Salas' },
-  { tab: 'voz', icon: 'auto_awesome', label: 'Asistente de Voz (RF18)' },
   { tab: 'dulceria', icon: 'local_cafe', label: 'Dulcería' },
 ];
+
+const AYUDA_ADMIN = 'Lista para ayudarte: pedime un reporte de ventas, crear una película, programar una función o cambiar un precio.';
 
 // Ultima peticion del agente que ya se aplico: sin esto, volver a entrar a la consola repetiria una peticion vieja.
 let ultimaPeticionAplicada = 0;
@@ -33,7 +38,18 @@ export const AdminConsole = () => {
   const navigate = useNavigate();
   const { dispatch } = useCine();
   const { usuario, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>(() => leerEstadoSesion('lumen_admin_tab', 'reportes' as AdminTab));
+  // Una pestaña guardada que ya no existe (ej. la vieja "Asistente de Voz", que ahora es el selector de modo de arriba) no debe dejar la pantalla en blanco.
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    const guardada = leerEstadoSesion<string>('lumen_admin_tab', 'reportes');
+    return NAV_ITEMS.some((item) => item.tab === guardada) ? (guardada as AdminTab) : 'reportes';
+  });
+
+  // La voz: el mismo selector de modo y el mismo panel que en la app de cliente (Táctil / Voz + UI Dinámica / Solo Voz).
+  const { modo, setModo, voz } = useVozSesion();
+  const cambiarModo = (m: ModoInteraccion) => {
+    setModo(m);
+    if (m === 'voz') navigate('/voz'); // Solo Voz es una pantalla aparte; al salir de ahi se vuelve a esta consola
+  };
 
   // El agente de voz puede cambiar de pestaña ("mostrame los reportes") y recargarlas tras aplicar un cambio.
   const { solicitudAdminTab, refrescos } = useUiControl();
@@ -126,14 +142,30 @@ export const AdminConsole = () => {
         </header>
 
         <main className="w-full pt-20 bg-background flex-grow">
+          {/* Selector de modo + panel de voz (solo en "Voz + UI Dinámica"): juntos y fijos arriba, igual que en la app de cliente. */}
+          <div className="sticky top-20 z-30 bg-surface-container-lowest">
+            <TopModeSwitcher
+              mode={modo}
+              onChangeMode={cambiarModo}
+              voz={voz}
+              izquierda={
+                <>
+                  <EstadoConexion modo={modo} voz={voz} />
+                  <div className="hidden md:flex items-center gap-space-2xs px-space-sm py-space-xs rounded-lg bg-surface-container">
+                    <span className="material-symbols-outlined text-secondary text-[16px]">schedule</span>
+                    <RelojSistema />
+                  </div>
+                </>
+              }
+            />
+            {modo === 'hibrido' && <VoiceStrip voz={voz} ayuda={AYUDA_ADMIN} />}
+          </div>
           {activeTab === 'cartelera' && <AdminCartelera key={refrescos.cartelera ?? 0} />}
           {activeTab === 'reportes' && <AdminReportes key={refrescos.reportes ?? 0} />}
           {activeTab === 'usuarios' && <AdminUsuarios key={refrescos.usuarios ?? 0} />}
           {activeTab === 'auditoria' && <AdminAuditoria key={refrescos.auditoria ?? 0} />}
           {activeTab === 'salas' && <AdminSalas key={refrescos.salas ?? 0} />}
           {activeTab === 'promos' && <AdminPreciosPromos key={refrescos.promos ?? 0} />}
-          {activeTab === 'voz' && <AdminVoz onSalir={() => setActiveTab('reportes')} />}
-
           {activeTab === 'dulceria' && <AdminDulceria key={refrescos.dulceria ?? 0} />}
 
         </main>

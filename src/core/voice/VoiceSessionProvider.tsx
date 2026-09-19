@@ -1,9 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../controllers/AuthContext';
 import { useCine } from '../../controllers/CineContext';
 import { CapaVentanas } from '../../components/windows/CapaVentanas';
-import { VoiceDock } from '../../components/voice/VoiceDock';
 import { useUiActionHandler, type ModoInteraccion } from '../ui/useUiActionHandler';
 import { useVentanas } from '../ui/VentanasContext';
 import { useVoiceSession, type SesionVoz } from './useVoiceSession';
@@ -23,12 +21,12 @@ const VozContext = createContext<ContextoVoz | undefined>(undefined);
  * asi la sesion no se corta al navegar, ni al pasar de "Voz + UI Dinamica" a "Solo Voz", y el agente puede mover la
  * app real (router + estado de la compra) con las acciones de interfaz que manda el servidor.
  *
- *  - tactil: sin microfono.  hibrido: microfono + panel de voz (debajo del selector de modo) + ventanas sobre la app real.
+ *  - tactil: sin microfono.  hibrido: microfono + panel de voz (debajo del selector de modo, en la app de cliente y en la
+ *    consola de administrador) + ventanas sobre la app real.
  *  - voz: microfono + pantalla de voz pura (RF16); el estado de la compra se actualiza pero no se navega.
  */
 export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
   const { usuario, token } = useAuth();
-  const location = useLocation();
   const ventanas = useVentanas();
   const [modo, setModo] = useState<ModoInteraccion>('tactil');
   const modoRef = useRef(modo);
@@ -84,14 +82,7 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
   return (
     <VozContext.Provider value={value}>
       {children}
-      {modo === 'hibrido' && (
-        <>
-          <CapaVentanas onCancelar={() => voz.enviarTexto('cancelá')} onConfirmar={() => voz.enviarTexto('confirmo')} />
-          {/* En la app de cliente el panel de voz va en el Layout, debajo del selector de modo (VoiceStrip). La consola de
-              administrador no tiene ese selector: ahi el asistente queda como panel flotante. */}
-          {location.pathname.startsWith('/admin') && <VoiceDock voz={voz} onCerrar={() => setModo('tactil')} />}
-        </>
-      )}
+      {modo === 'hibrido' && <CapaVentanas onCancelar={() => voz.enviarTexto('cancelá')} onConfirmar={() => voz.enviarTexto('confirmo')} />}
     </VozContext.Provider>
   );
 };

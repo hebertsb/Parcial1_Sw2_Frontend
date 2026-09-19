@@ -1,3 +1,4 @@
+import { FilaAdmin } from './FilaAdmin';
 import type { Precio } from '../../core/types/precio.types';
 import type { Funcion } from '../../core/types/funcion.types';
 
@@ -31,7 +32,7 @@ export const PreciosTabla = ({ precios, funciones, onEditar, onEliminar }: Preci
           precios.map((precio) => {
             const enUso = funciones.filter((f) => f.idPrecio === precio.idPrecio).length;
             return (
-            <tr key={precio.idPrecio}>
+            <FilaAdmin key={precio.idPrecio} entidad="precio" id={precio.idPrecio}>
               <td className={TD}>{Number(precio.valor).toFixed(2)}</td>
               <td className={TD}>{precio.vigenteDesde}</td>
               <td className={TD}>{precio.vigenteHasta ?? 'Sin límite'}</td>
@@ -50,7 +51,7 @@ export const PreciosTabla = ({ precios, funciones, onEditar, onEliminar }: Preci
                   </button>
                 </div>
               </td>
-            </tr>
+            </FilaAdmin>
             );
           })
         )}

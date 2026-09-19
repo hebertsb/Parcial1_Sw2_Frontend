@@ -1,3 +1,4 @@
+import { FilaAdmin } from './FilaAdmin';
 import type { Promocion } from '../../core/types/promocion.types';
 
 const TH = 'py-space-sm px-space-md text-left font-label-code text-label-code uppercase text-outline';
@@ -30,7 +31,7 @@ export const PromocionesTabla = ({ promociones, onEditar, onEliminar, onAsociar 
           <tr><td className={TD} colSpan={5}>No hay promociones creadas todavía.</td></tr>
         ) : (
           promociones.map((promocion) => (
-            <tr key={promocion.idPromocion}>
+            <FilaAdmin key={promocion.idPromocion} entidad="promocion" id={promocion.idPromocion}>
               <td className={TD}>
                 <div className="flex flex-col">
                   <span className="font-bold">{promocion.nombre}</span>
@@ -57,7 +58,7 @@ export const PromocionesTabla = ({ promociones, onEditar, onEliminar, onAsociar 
                   </button>
                 </div>
               </td>
-            </tr>
+            </FilaAdmin>
           ))
         )}
       </tbody>

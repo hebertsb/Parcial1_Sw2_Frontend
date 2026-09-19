@@ -3,7 +3,11 @@ import type { SesionVoz } from '../../core/voice/useVoiceSession';
 
 interface VoiceStripProps {
   voz: SesionVoz;
+  /** Lo que dice la tarjeta del agente mientras espera una instruccion (cambia segun el rol: cliente o administrador). */
+  ayuda?: string;
 }
+
+const AYUDA_CLIENTE = 'Lista para ayudarte: pedime la cartelera, entradas o algo de la dulcería.';
 
 const ETIQUETA_ESTADO = {
   apagada: 'Tocá el micrófono para conversar',
@@ -24,7 +28,7 @@ const N_BARRAS = 5;
  * Cuando el agente termina de hablar, a los pocos segundos vuelve solo a "escuchando" (ver `SesionVoz.turno`) en vez
  * de quedarse con la respuesta anterior. Para cerrarlo se usa el selector de modo de arriba, no un boton propio.
  */
-export const VoiceStrip = ({ voz }: VoiceStripProps) => {
+export const VoiceStrip = ({ voz, ayuda = AYUDA_CLIENTE }: VoiceStripProps) => {
   const orbeRef = useRef<HTMLDivElement | null>(null);
   const barrasRef = useRef<Array<HTMLSpanElement | null>>([]);
   const estadoRef = useRef(voz.estado);
@@ -186,7 +190,7 @@ export const VoiceStrip = ({ voz }: VoiceStripProps) => {
                 </p>
               ) : (
                 <p className="font-body-sm text-body-sm text-on-surface-variant/60" data-testid="strip-respuesta-vacio">
-                  Lista para ayudarte: pedime la cartelera, entradas o algo de la dulcería.
+                  {ayuda}
                 </p>
               )}
             </div>

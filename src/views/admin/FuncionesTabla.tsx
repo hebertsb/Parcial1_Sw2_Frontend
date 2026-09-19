@@ -1,3 +1,4 @@
+import { FilaAdmin } from './FilaAdmin';
 import type { Funcion } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import type { Sala } from '../../core/types/sala.types';
@@ -35,7 +36,7 @@ export const FuncionesTabla = ({ funciones, peliculas, salas, onEditar, onCancel
             <tr><td className={TD} colSpan={6}>No hay funciones creadas todavía.</td></tr>
           ) : (
             funciones.map((funcion) => (
-              <tr key={funcion.idFuncion}>
+              <FilaAdmin key={funcion.idFuncion} entidad="funcion" id={funcion.idFuncion}>
                 <td className={TD}>{tituloDe(funcion.idPelicula)}</td>
                 <td className={TD}>{salaDe(funcion.idSala)}</td>
                 <td className={TD}>{funcion.fecha}</td>
@@ -57,7 +58,7 @@ export const FuncionesTabla = ({ funciones, peliculas, salas, onEditar, onCancel
                     </div>
                   )}
                 </td>
-              </tr>
+              </FilaAdmin>
             ))
           )}
         </tbody>

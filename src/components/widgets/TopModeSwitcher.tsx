@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { SesionVoz } from '../../core/voice/useVoiceSession';
 import { formatearSegundos } from '../../core/time/reloj';
 
@@ -6,6 +7,8 @@ interface TopModeSwitcherProps {
   onChangeMode: (mode: 'tactil' | 'hibrido' | 'voz') => void;
   /** La conversacion de voz: de ahi salen el estado de la conexion y las latencias que se muestran junto al selector. */
   voz: SesionVoz;
+  /** Contenido extra a la izquierda del selector (la consola de admin, que no tiene esos datos en su cabecera, los pone aca). */
+  izquierda?: ReactNode;
 }
 
 /**
@@ -13,28 +16,34 @@ interface TopModeSwitcherProps {
  * de voz (VoiceStrip) aparece justo DEBAJO de este selector y la app real queda a la vista, que el agente va moviendo
  * segun lo que se le pide (ver routes/Layout.tsx: los dos comparten el mismo contenedor fijo).
  */
-export const TopModeSwitcher = ({ mode, onChangeMode, voz }: TopModeSwitcherProps) => {
+export const TopModeSwitcher = ({ mode, onChangeMode, voz, izquierda }: TopModeSwitcherProps) => {
   // "Pipeline WebSocket activo" solo cuando la conversacion esta realmente en marcha; si no, el titulo de siempre.
   const conectado = mode === 'hibrido' && (voz.estado === 'escuchando' || voz.estado === 'pensando' || voz.estado === 'hablando');
   return (
     <div data-testid="mode-switcher" className="flex flex-col w-full bg-surface-container-lowest">
       {/* Status Strip & Mode Toggle Anchor */}
       <div className="w-full px-space-lg py-space-sm flex flex-wrap items-center justify-between gap-space-md bg-surface-container-low/60 backdrop-blur-md">
-        {/* Estado del pipeline de voz: solo cuando la conversacion esta en marcha (en Tactil no se muestra nada). */}
-        {conectado && (
-          <div className="flex items-center gap-space-sm">
-            <div className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/20 text-secondary">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
-              <span className="font-label-code text-label-code uppercase tracking-wider" data-testid="pipeline-estado">
-                Pipeline generativo WebSocket activo
-              </span>
-            </div>
-            {/* Numeros medidos de verdad: la latencia de ida y vuelta al agente y lo que tardo su ultima respuesta. */}
-            {voz.latenciaMs !== null && (
-              <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-wider" data-testid="latencia-voz">
-                • Latencia: {voz.latenciaMs} ms
-                {voz.ultimaRespuestaMs !== null && <> • Respuesta: {formatearSegundos(voz.ultimaRespuestaMs)}</>}
-              </span>
+        {/* Izquierda: lo que aporte la pantalla (ej. la consola de admin pone aca la hora y el estado del microfono) y el
+            estado del pipeline de voz, que solo aparece con la conversacion en marcha (en Tactil no se muestra nada). */}
+        {(izquierda || conectado) && (
+          <div className="flex flex-wrap items-center gap-space-sm">
+            {izquierda}
+            {conectado && (
+              <>
+                <div className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/20 text-secondary">
+                  <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+                  <span className="font-label-code text-label-code uppercase tracking-wider" data-testid="pipeline-estado">
+                    Pipeline generativo WebSocket activo
+                  </span>
+                </div>
+                {/* Numeros medidos de verdad: la latencia de ida y vuelta al agente y lo que tardo su ultima respuesta. */}
+                {voz.latenciaMs !== null && (
+                  <span className="font-label-code text-label-code text-on-surface-variant uppercase tracking-wider" data-testid="latencia-voz">
+                    • Latencia: {voz.latenciaMs} ms
+                    {voz.ultimaRespuestaMs !== null && <> • Respuesta: {formatearSegundos(voz.ultimaRespuestaMs)}</>}
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}

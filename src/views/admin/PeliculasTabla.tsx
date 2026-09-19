@@ -1,3 +1,4 @@
+import { FilaAdmin } from './FilaAdmin';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import { posterFor } from '../../core/posters';
 
@@ -28,7 +29,7 @@ export const PeliculasTabla = ({ peliculas, onEditar, onEliminar }: PeliculasTab
           <tr><td className={TD} colSpan={6}>No hay películas activas todavía.</td></tr>
         ) : (
           peliculas.map((pelicula) => (
-            <tr key={pelicula.idPelicula}>
+            <FilaAdmin key={pelicula.idPelicula} entidad="pelicula" id={pelicula.idPelicula}>
               <td className={TD}>
                 <div
                   className="w-10 h-14 rounded bg-cover bg-center bg-surface-container-highest"
@@ -49,7 +50,7 @@ export const PeliculasTabla = ({ peliculas, onEditar, onEliminar }: PeliculasTab
                   </button>
                 </div>
               </td>
-            </tr>
+            </FilaAdmin>
           ))
         )}
       </tbody>
