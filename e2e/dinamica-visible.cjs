@@ -13,6 +13,7 @@
 // NO confirma nada (no escribe en la base compartida): los pasos 7 y 8 inyectan acciones/eventos en el navegador.
 // Uso: SILENCIO_WAV=/ruta/silencio.wav node e2e/dinamica-visible.cjs
 const { chromium } = require('playwright-core');
+const { fraseDeEntradas } = require('./apoyo.cjs');
 
 const EDGE = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -136,7 +137,7 @@ function verificar(nombre, ok, detalle = '') {
   console.log(`\n== 3) "Quiero entradas para ${PELICULA}": se VE la eleccion y despues pasa a los asientos ==`);
   await page.evaluate(() => { window.__linea.length = 0; });
   const capturaResaltado = page.waitForSelector('[data-pelicula-resaltada="true"]', { timeout: 30000 }).then(async () => { await page.waitForTimeout(250); await page.screenshot({ path: 'dv3_pelicula_resaltada.png' }); });
-  await decir(`Quiero dos entradas para ${PELICULA}`);
+  await decir(await fraseDeEntradas(API, token, PELICULA));
   await capturaResaltado.catch(() => {});
   await page.waitForURL('**/compra', { timeout: 15000 }).catch(() => {});
   await page.waitForTimeout(600);

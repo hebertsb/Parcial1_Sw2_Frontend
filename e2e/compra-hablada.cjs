@@ -2,7 +2,10 @@
 // que la app real quedo en el estado correcto. Es la prueba mas cercana a la demo. NO confirma la compra: se queda en el
 // resumen (ventana de confirmacion abierta), asi que no escribe nada en la base compartida.
 // Uso: WAV=/ruta/compra.wav node e2e/compra-hablada.cjs
-// El WAV: docker exec back_agent python tests/manual/generar_wav.py "Quiero dos entradas para Oppenheimer||Los asientos del medio, juntos||Agregame un pochoclo grande||Listo, quiero pagar" tests/manual/out/compra.wav
+// El WAV: docker exec back_agent python tests/manual/generar_wav.py "Quiero dos entradas para Oppenheimer mañana a la una y media de la tarde||Los asientos del medio, juntos||Agregame un popcorn caramelo grande||Listo, quiero pagar" tests/manual/out/compra.wav
+// OJO: depende de los datos de la base. Con la cartelera de la demo (scripts/poblar_base_de_datos.py) cada película tiene varias funciones y el
+// agente PREGUNTA a cuál ir si no se le dice día y hora: la primera frase tiene que nombrar una función que exista (mirá la cartelera). Y
+// «un pochoclo grande» a secas coincide con dos productos (clásico y caramelo): el agente pregunta cuál, así que se nombra uno.
 const { chromium } = require('playwright-core');
 
 const EDGE = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';

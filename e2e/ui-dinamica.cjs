@@ -3,6 +3,7 @@
 // NO confirma la compra (no escribe nada en la base compartida): cancela en la ventana.
 // Uso: SILENCIO_WAV=/ruta/silencio.wav [ROL=administrador NOMBRE="Admin Lumen"] node e2e/ui-dinamica.cjs
 const { chromium } = require('playwright-core');
+const { fraseDeEntradas } = require('./apoyo.cjs');
 
 const EDGE = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -73,7 +74,7 @@ function verificar(nombre, ok, detalle = '') {
 
   if (ROL === 'cliente') {
     console.log('\n== 2) Compra por voz: la app se mueve sola ==');
-    await decir('Quiero dos entradas para Oppenheimer');
+    await decir(await fraseDeEntradas(process.env.BACKEND_URL || 'http://localhost:3333/api', token, 'Oppenheimer'));
     await page.waitForURL('**/compra', { timeout: 10000 }).catch(() => {});
     // La eleccion se deja ver ~1.3 s en la cartelera antes de pasar a los asientos: se espera el estado, no un tiempo fijo.
     await page.waitForFunction(() => !!JSON.parse(sessionStorage.getItem('lumen_cine_state') || '{}').funcionSeleccionada, null, { timeout: 10000 }).catch(() => {});
@@ -90,7 +91,9 @@ function verificar(nombre, ok, detalle = '') {
     verificar('las butacas traen ids reales del backend', (cine.butacasSeleccionadas || []).every((b) => Number.isInteger(b.idAsiento)));
     await page.screenshot({ path: 'ui3_butacas.png' });
 
-    await decir('agregame un pochoclo grande');
+    // Con la dulceria de la demo hay dos popcorn grandes (clasico y caramelo): «un pochoclo grande» a secas hace que el agente
+    // pregunte cual (correcto). Aca se nombra uno para medir el carrito.
+    await decir('agregame un popcorn caramelo grande');
     cine = await estadoCine();
     verificar('agrego dulceria al carrito real', (cine.candyBarSeleccionado || []).length >= 1, (cine.candyBarSeleccionado || []).map((i) => `${i.cantidad} ${i.nombre}`).join(', '));
     verificar('paso al Candy Bar', cine.estadoCompra === 'seleccionando_candybar', cine.estadoCompra);
