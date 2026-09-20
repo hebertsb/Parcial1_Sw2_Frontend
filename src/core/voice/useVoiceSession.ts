@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { VOICE_API_URL, VOICE_WS_URL } from '../../api/voice.api';
 import { formatearHora } from '../time/reloj';
 import { PlaybackQueue } from './playbackQueue';
+import type { CamposTarjeta, EventoPago } from '../types/pago.types';
 import {
   leerAudioDelServidor,
   TASA_CAPTURA_HZ,
@@ -75,6 +76,12 @@ export interface SesionVoz {
   enviarTexto: (texto: string) => void;
   /** Le cuenta al agente lo que el cliente tiene marcado en pantalla (ver `ContextoCompra`). No es un turno: no se contesta. */
   enviarContexto: (version: number, compra: ContextoCompra) => void;
+  /** Le avisa al agente si hay pantalla para el formulario de tarjeta (Voz + UI Dinamica) o no (Solo Voz). */
+  enviarPantalla: (disponible: boolean) => void;
+  /** Como va el formulario de tarjeta (solo el estado de cada campo, nunca lo escrito): el agente guia campo por campo con esto. */
+  enviarPagoCampos: (idVenta: number, campos: CamposTarjeta) => void;
+  /** Como termino el intento de pago; el agente lo verifica contra el backend antes de decir "pago aceptado". */
+  enviarPagoEvento: (idVenta: number, evento: EventoPago, mensaje?: string) => void;
 }
 
 // Reconectar: el agente tarda ~15 s en volver a levantar (carga Whisper y Piper), asi que se insiste ese tiempo antes de rendirse.
@@ -419,6 +426,13 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     [enviar],
   );
 
+  const enviarPantalla = useCallback((disponible: boolean) => enviar({ type: 'pantalla', disponible }), [enviar]);
+  const enviarPagoCampos = useCallback((idVenta: number, campos: CamposTarjeta) => enviar({ type: 'pago_campos', idVenta, campos }), [enviar]);
+  const enviarPagoEvento = useCallback(
+    (idVenta: number, evento: EventoPago, mensaje?: string) => enviar({ type: 'pago_evento', idVenta, evento, ...(mensaje ? { mensaje } : {}) }),
+    [enviar],
+  );
+
   // Al desmontar la pantalla se cierra todo (microfono incluido).
   useEffect(() => terminar, [terminar]);
 
@@ -479,5 +493,8 @@ export function useVoiceSession(opciones: OpcionesSesion): SesionVoz {
     interrumpir,
     enviarTexto,
     enviarContexto,
+    enviarPantalla,
+    enviarPagoCampos,
+    enviarPagoEvento,
   };
 }

@@ -1,4 +1,5 @@
 import type { AccionPropuesta, UiAction, VoiceResponseType } from '../types/voice.types';
+import type { CamposTarjeta, EventoPago } from '../types/pago.types';
 
 /**
  * Protocolo de la conversacion continua por WebSocket (`/ws/voz`).
@@ -43,6 +44,15 @@ export type MensajeCliente =
   | { type: 'interrupt' }
   /** La foto de lo marcado en pantalla + la version de la ultima tanda de acciones del servidor que ya aplico. No es un turno. */
   | { type: 'contexto'; v: number; compra: ContextoCompra }
+  /** ¿Hay pantalla donde mostrar el formulario de tarjeta (Voz + UI Dinamica) o no (Solo Voz)? Sin pantalla el agente solo ofrece efectivo. No es un turno. */
+  | { type: 'pantalla'; disponible: boolean }
+  /**
+   * Como va el formulario de tarjeta de Stripe: solo el estado de cada campo (completo / vacio / error de validacion), NUNCA lo escrito,
+   * que vive dentro de los iframes de Stripe. El agente lo usa para guiar campo por campo. No es un turno: no se contesta por si solo.
+   */
+  | { type: 'pago_campos'; idVenta: number; campos: CamposTarjeta }
+  /** Como termino el intento de pago. El agente NO lo da por bueno: lo verifica contra el backend antes de decir "pago aceptado". */
+  | { type: 'pago_evento'; idVenta: number; evento: EventoPago; mensaje?: string }
   | { type: 'bye' };
 
 /** Lo que las pantallas muestran del ultimo turno (la misma forma que ya usaban con /voice-chat, sin el audio). */

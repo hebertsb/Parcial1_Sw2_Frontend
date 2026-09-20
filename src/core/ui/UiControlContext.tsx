@@ -32,7 +32,18 @@ export interface ResaltadoAdmin {
 /** Cuanto se queda resaltado (ms): lo justo para verlo mientras el agente habla y despues se apaga solo. */
 const DURACION_RESALTADO_MS = 12000;
 
+/** Lo que la voz (o el botón de abajo) le pide al formulario de pago: enviar el cobro o cancelarlo. `n` distingue pedidos repetidos. */
+export interface SolicitudPago {
+  accion: 'enviar' | 'cancelar';
+  n: number;
+}
+
 interface UiControl {
+  solicitudPago: SolicitudPago | null;
+  pedirPago: (accion: SolicitudPago['accion']) => void;
+  /** El formulario de pago está cobrando: la barra de abajo lo muestra y no deja tocar dos veces. */
+  pagando: boolean;
+  setPagando: (valor: boolean) => void;
   solicitudAdminTab: { tab: string; n: number } | null;
   pedirAdminTab: (tab: string) => void;
   refrescos: Record<string, number>;
@@ -48,6 +59,9 @@ interface UiControl {
 const UiControlContext = createContext<UiControl | undefined>(undefined);
 
 export const UiControlProvider = ({ children }: { children: ReactNode }) => {
+  const [solicitudPago, setSolicitudPago] = useState<SolicitudPago | null>(null);
+  const [pagando, setPagando] = useState(false);
+  const pedirPago = useCallback((accion: SolicitudPago['accion']) => setSolicitudPago((prev) => ({ accion, n: (prev?.n ?? 0) + 1 })), []);
   const [solicitudAdminTab, setSolicitudAdminTab] = useState<UiControl['solicitudAdminTab']>(null);
   const [refrescos, setRefrescos] = useState<Record<string, number>>({});
   const [filtroCartelera, setFiltroCartelera] = useState<FiltroCartelera | null>(null);
@@ -83,8 +97,11 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const value = useMemo(
-    () => ({ solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin }),
-    [solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin],
+    () => ({
+      solicitudPago, pedirPago, pagando, setPagando,
+      solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin,
+    }),
+    [solicitudPago, pedirPago, pagando, solicitudAdminTab, pedirAdminTab, refrescos, refrescar, filtroCartelera, filtrarCartelera, resaltado, resaltarCartelera, resaltadoAdmin, resaltarAdmin],
   );
   return <UiControlContext.Provider value={value}>{children}</UiControlContext.Provider>;
 };

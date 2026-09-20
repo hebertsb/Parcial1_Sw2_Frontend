@@ -49,7 +49,7 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
       if (evento.type === 'ui_action') manejarUi(evento.acciones, evento.v);
     },
   });
-  const { iniciar, terminar, enviarContexto } = voz;
+  const { iniciar, terminar, enviarContexto, enviarPantalla } = voz;
   const { cerrarTodas, cerrar } = ventanas;
   const { state: cine } = useCine();
 
@@ -62,6 +62,12 @@ export const VoiceSessionProvider = ({ children }: { children: ReactNode }) => {
     const id = setTimeout(() => enviarContexto(versionUi, JSON.parse(claveContexto) as ContextoCompra), PAUSA_ENVIO_CONTEXTO_MS);
     return () => clearTimeout(id);
   }, [conversando, usuario?.rol, claveContexto, versionUi, enviarContexto]);
+
+  // El agente solo ofrece pagar con tarjeta si hay pantalla donde mostrar el formulario (Voz + UI Dinamica). En "Solo Voz" ofrece efectivo.
+  // Se le avisa al abrirse la conversacion y cada vez que se cambia de modo.
+  useEffect(() => {
+    if (conversando) enviarPantalla(modo === 'hibrido');
+  }, [conversando, modo, enviarPantalla]);
 
   // La entrada digital es el comprobante de la compra TERMINADA: cuando la compra se reinicia (volver al inicio, empezar
   // otra) ya no corresponde y no debe quedar flotando sobre lo que sigue.

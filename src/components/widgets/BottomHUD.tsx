@@ -1,70 +1,25 @@
-import { useState } from 'react';
 import { useCine } from '../../controllers/CineContext';
-import { useAuth } from '../../controllers/AuthContext';
-import { crearVenta } from '../../api/ventas.api';
-import { crearPago } from '../../api/pagos.api';
-import { ApiError } from '../../api/client';
+import { useUiControl } from '../../core/ui/UiControlContext';
 
 /**
  * Barra inferior de la compra: resumen de lo elegido (película, entradas, subtotal) y el botón para avanzar.
  * Solo aparece cuando hay una compra en curso. El cambio entre Táctil / Voz + UI Dinámica / Solo Voz se hace únicamente
  * con el selector de arriba (TopModeSwitcher): acá no se repite, y menos con botones que llevaban a otra pantalla.
+ *
+ * En el paso de pago NO hay botón de avanzar: el cobro (tarjeta con Stripe o efectivo) se hace con el botón "Pagar" del propio
+ * formulario de pago (components/pagos/SeccionPago.tsx), que es también lo que activa la voz al decir «pagar».
  */
 export const BottomHUD = () => {
   const { state, dispatch } = useCine();
-  const { token } = useAuth();
-  const [confirmando, setConfirmando] = useState(false);
-  const [errorVenta, setErrorVenta] = useState<string | null>(null);
+  const { pagando } = useUiControl();
 
   const totalEntradas = state.butacasSeleccionadas.reduce((acc, b) => acc + b.precio, 0);
   const totalSnacks = state.candyBarSeleccionado.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-  const total = totalEntradas + totalSnacks;
+  // Con la venta reservada manda su total real (incluye descuentos de promociones que solo calcula el backend).
+  const total = state.ventaPendiente ? Number(state.ventaPendiente.venta.total) : totalEntradas + totalSnacks;
 
   const totalTickets = state.butacasSeleccionadas.length;
-
-  const confirmarVenta = async () => {
-    if (!state.funcionSeleccionada || !token || confirmando) return;
-
-    setErrorVenta(null);
-    setConfirmando(true);
-    try {
-      const venta = await crearVenta(
-        {
-          idFuncion: state.funcionSeleccionada.idFuncion,
-          idAsientos: state.butacasSeleccionadas.map((b) => b.idAsiento),
-          tipoRegistro: 'manual',
-          // RF03: en este kiosco táctil la política de no-reembolso se muestra en
-          // pantalla (ver el aviso RF03 COMPLIANCE en ProcesoCompra.tsx) antes de
-          // llegar a este botón, así que confirmarla acá es válido.
-          confirmacionNoReembolso: true,
-          confirmacionVerbalCheck: false,
-          // CU09/RF20 (2026-09-16): mismo carrito de CandyBarSelection.tsx/"Candy Bar
-          // Express" — VentasService.crear valida cada idProducto server-side (nunca
-          // confía en el precio local) e inserta detalle_venta_dulceria en la misma
-          // transacción que las entradas.
-          dulceria: state.candyBarSeleccionado.map((item) => ({
-            idProducto: Number(item.id),
-            cantidad: item.cantidad,
-          })),
-        },
-        token,
-      );
-      // Pago controlado por el propio sistema (sin Stripe todavía, ver
-      // Backend/src/modules/pagos/pagos.service.ts) — "tarjeta" es el único método
-      // que esta UI de kiosco le muestra seleccionado al cliente.
-      const ventaPagada = await crearPago(venta.idVenta, 'tarjeta', token);
-      dispatch({ type: 'SET_VENTA_CREADA', payload: ventaPagada });
-      dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'completado' });
-    } catch (error) {
-      setErrorVenta(
-        error instanceof ApiError
-          ? error.message
-          : 'No se pudo confirmar la compra. Intentá de nuevo.',
-      );
-    } finally {
-      setConfirmando(false);
-    }
-  };
+  const enPago = state.estadoCompra === 'pago';
 
   const handleNextStep = () => {
     if (!state.peliculaSeleccionada) return;
@@ -75,21 +30,15 @@ export const BottomHUD = () => {
       }
     } else if (state.estadoCompra === 'seleccionando_candybar') {
       dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'pago' });
-    } else if (state.estadoCompra === 'pago') {
-      void confirmarVenta();
     }
   };
 
   const getNextStepText = () => {
     if (state.estadoCompra === 'seleccionando_asientos') return 'Ir al Candy Bar';
-    if (state.estadoCompra === 'seleccionando_candybar') return 'Continuar al Pago';
-    if (confirmando) return 'Confirmando...';
-    return 'Confirmar y Pagar';
+    return 'Continuar al Pago';
   };
 
-  const isNextDisabled =
-    (state.estadoCompra === 'seleccionando_asientos' && totalTickets === 0) ||
-    (state.estadoCompra === 'pago' && (confirmando || !state.funcionSeleccionada));
+  const isNextDisabled = state.estadoCompra === 'seleccionando_asientos' && totalTickets === 0;
 
   // Sin una compra en curso (o ya terminada: no queda nada que avanzar, y un "Confirmar y Pagar" sobrevivía a la compra
   // ya pagada) no hay nada que mostrar: la pantalla queda limpia (Layout.tsx tampoco reserva el espacio).
@@ -97,12 +46,6 @@ export const BottomHUD = () => {
 
   return (
     <aside data-testid="barra-compra" className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.8)] px-space-lg py-space-sm border-t border-surface-container">
-      {errorVenta && (
-        <div className="max-w-[1720px] mx-auto mb-space-xs px-space-md py-space-2xs rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-center gap-space-xs">
-          <span className="material-symbols-outlined text-[18px]">error</span>
-          <span>{errorVenta}</span>
-        </div>
-      )}
       <div className="max-w-[1720px] mx-auto flex items-center justify-between gap-space-md">
         {/* Left: Selection Status Counter Display */}
         <div className="hidden lg:flex items-center gap-space-md px-space-lg py-space-xs rounded-xl bg-surface-container shadow-inner">
@@ -123,7 +66,7 @@ export const BottomHUD = () => {
           </div>
           <div className="w-px h-8 bg-surface-variant"></div>
           <div className="flex flex-col text-right">
-            <span className="font-label-code text-label-code text-on-surface-variant uppercase">Subtotal</span>
+            <span className="font-label-code text-label-code text-on-surface-variant uppercase">{enPago ? 'Total' : 'Subtotal'}</span>
             <span className="font-headline-sm text-headline-sm text-primary">{total.toFixed(2)} Bs</span>
           </div>
         </div>
@@ -136,14 +79,21 @@ export const BottomHUD = () => {
               {totalTickets + state.candyBarSeleccionado.reduce((a, b) => a + b.cantidad, 0)}
             </span>
           </button>
-          <button
-            onClick={handleNextStep}
-            disabled={isNextDisabled}
-            className={`h-touch-target-kiosk px-space-xl rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-space-sm transition-transform ${isNextDisabled ? 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed' : 'bg-primary-container text-on-primary-container shadow-xl shadow-primary/30 active:scale-95'}`}
-          >
-            <span>{getNextStepText()}</span>
-            <span className="material-symbols-outlined text-[24px]">arrow_forward</span>
-          </button>
+          {enPago ? (
+            <div data-testid="barra-pago-estado" className="h-touch-target-kiosk px-space-lg rounded-xl bg-surface-container flex items-center gap-space-xs font-label-lg text-label-lg text-on-surface-variant">
+              <span className={`material-symbols-outlined text-[22px] ${pagando ? 'animate-spin text-primary' : 'text-tertiary'}`}>{pagando ? 'progress_activity' : 'lock'}</span>
+              <span>{pagando ? 'Procesando pago…' : 'Completá el pago en el formulario'}</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleNextStep}
+              disabled={isNextDisabled}
+              className={`h-touch-target-kiosk px-space-xl rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-space-sm transition-transform ${isNextDisabled ? 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed' : 'bg-primary-container text-on-primary-container shadow-xl shadow-primary/30 active:scale-95'}`}
+            >
+              <span>{getNextStepText()}</span>
+              <span className="material-symbols-outlined text-[24px]">arrow_forward</span>
+            </button>
+          )}
         </div>
       </div>
     </aside>

@@ -20,8 +20,13 @@ export interface CineState {
   butacasSeleccionadas: Butaca[];
   candyBarSeleccionado: ItemCandyBarSeleccionado[];
   estadoCompra: EstadoCompra;
-  /** La venta ya creada por `POST /ventas` — su `total` real reemplaza cualquier cálculo local en la vista de confirmación. */
+  /** La venta ya creada por `POST /ventas` y PAGADA — su `total` real reemplaza cualquier cálculo local en la vista de confirmación. */
   ventaCreada: Venta | null;
+  /**
+   * La venta ya creada pero todavía SIN pagar (pago con tarjeta en curso, por pantalla o guiado por voz): sus asientos están reservados.
+   * `firma` es la huella de lo elegido cuando se creó (ver firmaCompra.ts): si cambia, esta venta ya no corresponde a lo que se ve.
+   */
+  ventaPendiente: { venta: Venta; firma: string } | null;
 }
 
 export type CineAction =
@@ -40,6 +45,9 @@ export type CineAction =
   | { type: 'SET_CANDYBAR'; payload: ItemCandyBarSeleccionado[] }
   | { type: 'SET_ESTADO_COMPRA'; payload: EstadoCompra }
   | { type: 'SET_VENTA_CREADA'; payload: Venta }
+  | { type: 'SET_VENTA_PENDIENTE'; payload: { venta: Venta; firma: string } }
+  /** Ya no hay venta reservada esperando pago (se pagó, se canceló o dejó de corresponder). */
+  | { type: 'LIMPIAR_VENTA_PENDIENTE' }
   /** Saca la pelicula y todo lo que depende de ella (funcion, sala, butacas); la dulceria se queda (lo usa el agente de voz). */
   | { type: 'QUITAR_PELICULA' }
   /** Suelta la funcion y las butacas pero deja la pelicula: cambio de horario (lo usa el agente de voz). */
@@ -58,7 +66,8 @@ export const initialState: CineState = {
   butacasSeleccionadas: [],
   candyBarSeleccionado: [],
   estadoCompra: 'seleccionando_asientos',
-  ventaCreada: null
+  ventaCreada: null,
+  ventaPendiente: null
 };
 
 export const cineReducer = (state: CineState, action: CineAction): CineState => {
@@ -77,7 +86,8 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
         butacasSeleccionadas: [],
         candyBarSeleccionado: [],
         estadoCompra: 'seleccionando_asientos',
-        ventaCreada: null
+        ventaCreada: null,
+        ventaPendiente: null
       };
     case 'SET_FUNCION_SELECCIONADA':
       return { ...state, funcionSeleccionada: action.payload };
@@ -118,6 +128,10 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
       return { ...state, estadoCompra: action.payload };
     case 'SET_VENTA_CREADA':
       return { ...state, ventaCreada: action.payload };
+    case 'SET_VENTA_PENDIENTE':
+      return { ...state, ventaPendiente: action.payload };
+    case 'LIMPIAR_VENTA_PENDIENTE':
+      return state.ventaPendiente ? { ...state, ventaPendiente: null } : state;
     case 'QUITAR_PELICULA':
       return {
         ...state,
@@ -129,7 +143,8 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
         precioUnitario: null,
         butacasSeleccionadas: [],
         estadoCompra: 'seleccionando_asientos',
-        ventaCreada: null
+        ventaCreada: null,
+        ventaPendiente: null
       };
     case 'QUITAR_FUNCION':
       return {
@@ -140,7 +155,8 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
         disponibilidad: [],
         precioUnitario: null,
         butacasSeleccionadas: [],
-        estadoCompra: 'seleccionando_asientos'
+        estadoCompra: 'seleccionando_asientos',
+        ventaPendiente: null
       };
     case 'RESETEAR_COMPRA':
       return {
@@ -154,7 +170,8 @@ export const cineReducer = (state: CineState, action: CineAction): CineState => 
         butacasSeleccionadas: [],
         candyBarSeleccionado: [],
         estadoCompra: 'seleccionando_asientos',
-        ventaCreada: null
+        ventaCreada: null,
+        ventaPendiente: null
       };
     default:
       return state;

@@ -1,25 +1,33 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../controllers/AuthContext';
-import { listarMisCompras, obtenerVenta } from '../api/ventas.api';
-import type { VentaConFuncion, VentaConDetalle, EstadoVenta } from '../core/types/venta.types';
-import { posterFor } from '../core/posters';
+import { useEffect, useState } from "react";
+import { useAuth } from "../controllers/AuthContext";
+import { listarMisCompras, obtenerVenta } from "../api/ventas.api";
+import type {
+  VentaConFuncion,
+  VentaConDetalle,
+  EstadoVenta,
+} from "../core/types/venta.types";
+import { posterFor } from "../core/posters";
+import {
+  ModalBoletoImpresion,
+  DatosBoleto,
+} from "../components/widgets/ModalBoletoImpresion";
 
 const ESTADO_LABEL: Record<EstadoVenta, string> = {
-  pendiente: 'Pendiente',
-  confirmada: 'Confirmada',
-  pendiente_pago: 'Pendiente de pago',
-  pagada: 'Pagada',
-  anulada: 'Anulada',
-  cancelada: 'Cancelada',
+  pendiente: "Pendiente",
+  confirmada: "Confirmada",
+  pendiente_pago: "Pendiente de pago",
+  pagada: "Pagada",
+  anulada: "Anulada",
+  cancelada: "Cancelada",
 };
 
 const ESTADO_COLOR: Record<EstadoVenta, string> = {
-  pendiente: 'bg-surface-container-highest text-on-surface-variant',
-  confirmada: 'bg-tertiary/10 text-tertiary',
-  pendiente_pago: 'bg-primary/10 text-primary',
-  pagada: 'bg-tertiary/10 text-tertiary',
-  anulada: 'bg-error-container/40 text-on-error-container',
-  cancelada: 'bg-error-container/40 text-on-error-container',
+  pendiente: "bg-surface-container-highest text-on-surface-variant",
+  confirmada: "bg-tertiary/10 text-tertiary",
+  pendiente_pago: "bg-primary/10 text-primary",
+  pagada: "bg-tertiary/10 text-tertiary",
+  anulada: "bg-error-container/40 text-on-error-container",
+  cancelada: "bg-error-container/40 text-on-error-container",
 };
 
 /**
@@ -30,7 +38,7 @@ const ESTADO_COLOR: Record<EstadoVenta, string> = {
  * (`GET /ventas/:id`), no de entrada para las N compras de la lista.
  */
 export const MisCompras = () => {
-  const { token } = useAuth();
+  const { token, usuario } = useAuth();
   const [ventas, setVentas] = useState<VentaConFuncion[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +46,8 @@ export const MisCompras = () => {
   const [idExpandido, setIdExpandido] = useState<number | null>(null);
   const [detalle, setDetalle] = useState<VentaConDetalle | null>(null);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [boletoSeleccionado, setBoletoSeleccionado] =
+    useState<DatosBoleto | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -49,8 +59,8 @@ export const MisCompras = () => {
         const data = await listarMisCompras(token);
         if (!cancelado) setVentas(data);
       } catch (err) {
-        console.error('No se pudieron cargar tus compras.', err);
-        if (!cancelado) setError('No se pudo cargar tu historial de compras.');
+        console.error("No se pudieron cargar tus compras.", err);
+        if (!cancelado) setError("No se pudo cargar tu historial de compras.");
       } finally {
         if (!cancelado) setCargando(false);
       }
@@ -74,96 +84,228 @@ export const MisCompras = () => {
       const d = await obtenerVenta(venta.idVenta, token);
       setDetalle(d);
     } catch (err) {
-      console.error('No se pudo cargar el detalle de la compra.', err);
+      console.error("No se pudo cargar el detalle de la compra.", err);
     } finally {
       setCargandoDetalle(false);
     }
   };
 
+  const abrirBoleto = async (
+    venta: VentaConFuncion,
+    detExistente?: VentaConDetalle | null,
+  ) => {
+    let det = detExistente;
+    if (!det && token) {
+      try {
+        det = await obtenerVenta(venta.idVenta, token);
+      } catch (err) {
+        console.error("No se pudo cargar el detalle para el boleto", err);
+      }
+    }
+
+    const asientos =
+      det && det.idVenta === venta.idVenta && det.detalleEntradas.length > 0
+        ? det.detalleEntradas.map((d) => `${d.asiento.fila}${d.asiento.numero}`)
+        : ["Asiento Asignado"];
+
+    const dulceria =
+      det && det.idVenta === venta.idVenta
+        ? det.detalleDulceria.map((d) => ({
+            nombre: d.producto.nombre,
+            cantidad: d.cantidad,
+            precio: Number(d.precioUnitario),
+          }))
+        : [];
+
+    setBoletoSeleccionado({
+      idVenta: venta.idVenta,
+      pelicula: venta.funcion.pelicula.titulo,
+      sala: venta.funcion.sala.nombre,
+      fecha: venta.funcion.fecha,
+      hora: venta.funcion.horaInicio.slice(0, 5),
+      asientos,
+      total: Number(venta.total),
+      subtotal: det ? Number(det.subtotal) : Number(venta.total),
+      descuento: det ? Number(det.descuentoAplicado) : 0,
+      cliente: usuario?.nombre ?? "Cliente",
+      metodoPago: venta.estado === "pagada" ? "Pagado" : "Por Confirmar",
+      fechaCompra: venta.fechaHora,
+      dulceria,
+    });
+  };
+
   return (
     <div className="w-full px-space-lg py-space-xl max-w-4xl mx-auto flex flex-col gap-space-lg">
       <div className="flex flex-col gap-space-2xs">
-        <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">Mis compras</span>
-        <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Historial de compras</h1>
+        <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">
+          Mis compras
+        </span>
+        <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+          Historial de compras
+        </h1>
       </div>
 
-      {cargando && <p className="font-label-md text-label-md text-on-surface-variant">Cargando tus compras...</p>}
+      {cargando && (
+        <p className="font-label-md text-label-md text-on-surface-variant">
+          Cargando tus compras...
+        </p>
+      )}
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
       {!cargando && !error && ventas.length === 0 && (
-        <p className="font-label-md text-label-md text-on-surface-variant">Todavía no compraste ninguna entrada.</p>
+        <p className="font-label-md text-label-md text-on-surface-variant">
+          Todavía no compraste ninguna entrada.
+        </p>
       )}
 
       <div className="flex flex-col gap-space-md">
         {ventas.map((venta) => {
           const expandido = idExpandido === venta.idVenta;
           return (
-            <div key={venta.idVenta} className="rounded-2xl bg-surface-container-low shadow-lg overflow-hidden">
+            <div
+              key={venta.idVenta}
+              className="rounded-2xl bg-surface-container-low shadow-lg overflow-hidden"
+            >
               <button
                 onClick={() => void toggleExpandir(venta)}
                 className="w-full flex items-center gap-space-md p-space-md text-left hover:bg-surface-container transition-colors"
               >
                 <img
-                  src={venta.funcion.pelicula.posterUrl ?? posterFor(venta.funcion.pelicula.idPelicula)}
+                  src={
+                    venta.funcion.pelicula.posterUrl ??
+                    posterFor(venta.funcion.pelicula.idPelicula)
+                  }
                   alt=""
                   className="w-16 h-24 object-cover rounded-lg shadow-md shrink-0"
                 />
                 <div className="flex-1 flex flex-col gap-space-2xs min-w-0">
-                  <span className="font-headline-sm text-headline-sm text-on-surface line-clamp-1">{venta.funcion.pelicula.titulo}</span>
+                  <span className="font-headline-sm text-headline-sm text-on-surface line-clamp-1">
+                    {venta.funcion.pelicula.titulo}
+                  </span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {venta.funcion.fecha} · {venta.funcion.horaInicio.slice(0, 5)} · {venta.funcion.sala.nombre}
+                    {venta.funcion.fecha} ·{" "}
+                    {venta.funcion.horaInicio.slice(0, 5)} ·{" "}
+                    {venta.funcion.sala.nombre}
                   </span>
                   <span className="font-label-code text-label-code text-on-surface-variant">
-                    Compra #{venta.idVenta} · {new Date(venta.fechaHora).toLocaleDateString('es-BO')}
+                    Compra #{venta.idVenta} ·{" "}
+                    {new Date(venta.fechaHora).toLocaleDateString("es-BO")}
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-space-2xs shrink-0">
-                  <span className={`px-space-xs py-0.5 rounded font-label-code text-label-code ${ESTADO_COLOR[venta.estado] ?? 'bg-surface-container-highest text-on-surface-variant'}`}>
+                  <span
+                    className={`px-space-xs py-0.5 rounded font-label-code text-label-code ${ESTADO_COLOR[venta.estado] ?? "bg-surface-container-highest text-on-surface-variant"}`}
+                  >
                     {ESTADO_LABEL[venta.estado] ?? venta.estado}
                   </span>
-                  <span className="font-headline-sm text-headline-sm text-primary font-bold">{Number(venta.total).toFixed(2)} Bs</span>
+                  <span className="font-headline-sm text-headline-sm text-primary font-bold">
+                    {Number(venta.total).toFixed(2)} Bs
+                  </span>
                 </div>
-                <span className="material-symbols-outlined text-on-surface-variant">{expandido ? 'expand_less' : 'expand_more'}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void abrirBoleto(
+                      venta,
+                      detalle && detalle.idVenta === venta.idVenta
+                        ? detalle
+                        : null,
+                    );
+                  }}
+                  title="Ver e imprimir boleto"
+                  className="px-3 py-1.5 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-black border border-primary/30 font-label-code text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shrink-0 ml-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    print
+                  </span>
+                  <span className="hidden sm:inline">Boleto</span>
+                </button>
+                <span className="material-symbols-outlined text-on-surface-variant">
+                  {expandido ? "expand_less" : "expand_more"}
+                </span>
               </button>
 
               {expandido && (
                 <div className="px-space-md pb-space-md border-t border-surface-container">
                   {cargandoDetalle ? (
-                    <p className="font-body-sm text-body-sm text-on-surface-variant pt-space-sm">Cargando detalle...</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant pt-space-sm">
+                      Cargando detalle...
+                    </p>
                   ) : detalle && detalle.idVenta === venta.idVenta ? (
                     <div className="pt-space-sm flex flex-col gap-space-sm">
                       <div className="flex flex-col gap-space-2xs">
-                        <span className="font-label-code text-label-code uppercase text-on-surface-variant">Asientos</span>
+                        <span className="font-label-code text-label-code uppercase text-on-surface-variant">
+                          Asientos
+                        </span>
                         <span className="font-body-sm text-body-sm text-on-surface">
                           {detalle.detalleEntradas.length > 0
-                            ? detalle.detalleEntradas.map((d) => `${d.asiento.fila}${d.asiento.numero}`).join(', ')
-                            : '—'}
+                            ? detalle.detalleEntradas
+                                .map(
+                                  (d) => `${d.asiento.fila}${d.asiento.numero}`,
+                                )
+                                .join(", ")
+                            : "—"}
                         </span>
                       </div>
 
                       {detalle.detalleDulceria.length > 0 && (
                         <div className="flex flex-col gap-space-2xs">
-                          <span className="font-label-code text-label-code uppercase text-on-surface-variant">Dulcería</span>
+                          <span className="font-label-code text-label-code uppercase text-on-surface-variant">
+                            Dulcería
+                          </span>
                           {detalle.detalleDulceria.map((d) => (
-                            <span key={d.idDetalle} className="font-body-sm text-body-sm text-on-surface">
-                              {d.cantidad}x {d.producto.nombre} — {(Number(d.precioUnitario) * d.cantidad).toFixed(2)} Bs
+                            <span
+                              key={d.idDetalle}
+                              className="font-body-sm text-body-sm text-on-surface"
+                            >
+                              {d.cantidad}x {d.producto.nombre} —{" "}
+                              {(Number(d.precioUnitario) * d.cantidad).toFixed(
+                                2,
+                              )}{" "}
+                              Bs
                             </span>
                           ))}
                         </div>
                       )}
 
                       {detalle.promocion && (
-                        <span className="font-body-sm text-body-sm text-tertiary">Promoción aplicada: {detalle.promocion.nombre}</span>
+                        <span className="font-body-sm text-body-sm text-tertiary">
+                          Promoción aplicada: {detalle.promocion.nombre}
+                        </span>
                       )}
 
                       <div className="flex items-center justify-between pt-space-2xs">
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">Subtotal: {Number(detalle.subtotal).toFixed(2)} Bs</span>
+                        <span className="font-body-sm text-body-sm text-on-surface-variant">
+                          Subtotal: {Number(detalle.subtotal).toFixed(2)} Bs
+                        </span>
                         {Number(detalle.descuentoAplicado) > 0 && (
-                          <span className="font-body-sm text-body-sm text-tertiary">− {Number(detalle.descuentoAplicado).toFixed(2)} Bs descuento</span>
+                          <span className="font-body-sm text-body-sm text-tertiary">
+                            − {Number(detalle.descuentoAplicado).toFixed(2)} Bs
+                            descuento
+                          </span>
                         )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-space-xs border-t border-surface-container mt-space-2xs">
+                        <span className="font-label-code text-xs text-on-surface-variant">
+                          Boleto oficial para sala
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void abrirBoleto(venta, detalle)}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-primary-container text-on-primary-container font-label-md text-xs font-bold flex items-center gap-1.5 shadow-[0_0_16px_rgba(245,158,11,0.25)] hover:scale-105 active:scale-95 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            print
+                          </span>
+                          <span>Imprimir boleto térmico / PDF</span>
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="font-body-sm text-body-sm text-error pt-space-sm">No se pudo cargar el detalle.</p>
+                    <p className="font-body-sm text-body-sm text-error pt-space-sm">
+                      No se pudo cargar el detalle.
+                    </p>
                   )}
                 </div>
               )}
@@ -171,6 +313,14 @@ export const MisCompras = () => {
           );
         })}
       </div>
+
+      {boletoSeleccionado && (
+        <ModalBoletoImpresion
+          abierto={true}
+          onCerrar={() => setBoletoSeleccionado(null)}
+          datos={boletoSeleccionado}
+        />
+      )}
     </div>
   );
 };

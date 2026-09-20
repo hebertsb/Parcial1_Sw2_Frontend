@@ -2,6 +2,7 @@ import { useCallback, useRef, type MutableRefObject } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCine } from '../../controllers/CineContext';
 import type { DestinoNavegacion, UiAction } from '../types/voice.types';
+import { firmaDeCompra } from '../pagos/firmaCompra';
 import { useUiControl } from './UiControlContext';
 import { useVentanas } from './VentanasContext';
 
@@ -53,13 +54,15 @@ export function useUiActionHandler(
 ): (acciones: UiAction[], version?: number) => void {
   const navigate = useNavigate();
   const location = useLocation();
-  const { dispatch } = useCine();
+  const { state: cine, dispatch } = useCine();
   const control = useUiControl();
   const ventanas = useVentanas();
 
-  // La ruta actual se lee por ref: el manejador se llama desde un evento del WebSocket, no desde un render.
+  // La ruta actual y la compra en curso se leen por ref: el manejador se llama desde un evento del WebSocket, no desde un render.
   const rutaRef = useRef(location.pathname);
   rutaRef.current = location.pathname;
+  const cineRef = useRef(cine);
+  cineRef.current = cine;
   const colaRef = useRef<Promise<void>>(Promise.resolve());
 
   const ejecutar = useCallback(
@@ -86,8 +89,23 @@ export function useUiActionHandler(
           case 'compra.completada':
             ventanas.cerrar('confirmacion'); // ya se pagó: no queda nada por confirmar (el servidor también lo cierra)
             if (accion.venta) dispatch({ type: 'SET_VENTA_CREADA', payload: accion.venta });
+            dispatch({ type: 'LIMPIAR_VENTA_PENDIENTE' }); // ya se pagó (con la tarjeta, o en efectivo por voz): no queda nada reservado esperando
             dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'completado' });
             irA('/compra');
+            break;
+          case 'pago.abrir':
+            // Ya se dijo "confirmo": la venta esta creada (con sus asientos reservados) y lo que sigue es cobrarla con tarjeta. La pantalla de
+            // pago muestra el formulario de Stripe para ESTA venta; se le pone la huella de lo elegido para no cobrar una venta que ya no corresponde.
+            ventanas.cerrar('confirmacion');
+            dispatch({ type: 'SET_VENTA_PENDIENTE', payload: { venta: accion.venta, firma: firmaDeCompra(cineRef.current) } });
+            dispatch({ type: 'SET_ESTADO_COMPRA', payload: 'pago' });
+            irA('/compra');
+            break;
+          case 'pago.enviar':
+            control.pedirPago('enviar');
+            break;
+          case 'pago.cancelar':
+            control.pedirPago('cancelar');
             break;
           case 'compra.reiniciar':
             ventanas.cerrar('confirmacion');

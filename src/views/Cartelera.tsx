@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../controllers/AuthContext';
-import { useCine } from '../controllers/CineContext';
-import { useUiControl } from '../core/ui/UiControlContext';
-import { CarteleraFiltros } from '../components/widgets/CarteleraFiltros';
-import { CarteleraGrid } from '../components/widgets/CarteleraGrid';
-import { CarteleraPromos } from '../components/widgets/CarteleraPromos';
-import { listarPeliculas } from '../api/peliculas.api';
-import { listarFunciones } from '../api/funciones.api';
-import { Funcion } from '../core/types/funcion.types';
+import { useEffect, useState } from "react";
+import { useAuth } from "../controllers/AuthContext";
+import { useCine } from "../controllers/CineContext";
+import { useUiControl } from "../core/ui/UiControlContext";
+import { CarteleraFiltros } from "../components/widgets/CarteleraFiltros";
+import { CarteleraGrid } from "../components/widgets/CarteleraGrid";
+import { CarteleraPromos } from "../components/widgets/CarteleraPromos";
+import { GlassyCarousel } from "../components/widgets/GlassyCarousel";
+import { listarPeliculas } from "../api/peliculas.api";
+import { listarFunciones } from "../api/funciones.api";
+import { Funcion } from "../core/types/funcion.types";
 
 export const Cartelera = () => {
   const { state, dispatch } = useCine();
   const { token } = useAuth();
-  const [funcionesPorPelicula, setFuncionesPorPelicula] = useState<Map<number, Funcion[]>>(new Map());
+  const [funcionesPorPelicula, setFuncionesPorPelicula] = useState<
+    Map<number, Funcion[]>
+  >(new Map());
   const [diasDisponibles, setDiasDisponibles] = useState<string[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -33,13 +36,24 @@ export const Cartelera = () => {
       setCargando(true);
       setError(null);
       try {
-        const [peliculas, funciones] = await Promise.all([listarPeliculas(token), listarFunciones(token)]);
+        const [peliculas, funciones] = await Promise.all([
+          listarPeliculas(token),
+          listarFunciones(token),
+        ]);
         if (cancelado) return;
 
         const ahora = new Date();
         const futuras = funciones
-          .filter((f) => f.estado === 'programada' && new Date(`${f.fecha}T${f.horaInicio}`) >= ahora)
-          .sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`));
+          .filter(
+            (f) =>
+              f.estado === "programada" &&
+              new Date(`${f.fecha}T${f.horaInicio}`) >= ahora,
+          )
+          .sort((a, b) =>
+            `${a.fecha}${a.horaInicio}`.localeCompare(
+              `${b.fecha}${b.horaInicio}`,
+            ),
+          );
 
         const agrupadas = new Map<number, Funcion[]>();
         futuras.forEach((funcion) => {
@@ -49,14 +63,21 @@ export const Cartelera = () => {
         });
 
         setFuncionesPorPelicula(agrupadas);
-        setDiasDisponibles(Array.from(new Set(futuras.map((f) => f.fecha))).sort());
+        setDiasDisponibles(
+          Array.from(new Set(futuras.map((f) => f.fecha))).sort(),
+        );
         // El backend hace soft-delete (estado='inactiva'), no borrado físico — GET
         // /peliculas devuelve también las inactivas, así que se filtran acá.
-        dispatch({ type: 'SET_PELICULAS', payload: peliculas.filter((p) => p.estado === 'activa') });
+        dispatch({
+          type: "SET_PELICULAS",
+          payload: peliculas.filter((p) => p.estado === "activa"),
+        });
       } catch (err) {
         if (!cancelado) {
-          console.error('No se pudo cargar la cartelera real.', err);
-          setError('No se pudo cargar la cartelera. Intentá de nuevo más tarde.');
+          console.error("No se pudo cargar la cartelera real.", err);
+          setError(
+            "No se pudo cargar la cartelera. Intentá de nuevo más tarde.",
+          );
         }
       } finally {
         if (!cancelado) setCargando(false);
@@ -70,57 +91,94 @@ export const Cartelera = () => {
 
   const funcionesFiltradasPorDia = diaSeleccionado
     ? new Map(
-        Array.from(funcionesPorPelicula.entries()).map(([idPelicula, lista]) => [
-          idPelicula,
-          lista.filter((f) => f.fecha === diaSeleccionado),
-        ]),
+        Array.from(funcionesPorPelicula.entries()).map(
+          ([idPelicula, lista]) => [
+            idPelicula,
+            lista.filter((f) => f.fecha === diaSeleccionado),
+          ],
+        ),
       )
     : funcionesPorPelicula;
 
   const peliculasVisibles = busqueda
-    ? state.peliculas.filter((p) => p.titulo.toLowerCase().includes(busqueda) || (p.genero ?? '').toLowerCase().includes(busqueda))
+    ? state.peliculas.filter(
+        (p) =>
+          p.titulo.toLowerCase().includes(busqueda) ||
+          (p.genero ?? "").toLowerCase().includes(busqueda),
+      )
     : state.peliculas;
 
   return (
     <div className="max-w-[1720px] mx-auto w-full px-space-xl lg:px-space-2xl py-space-xl flex-grow flex flex-col">
-    <div className="flex-grow flex flex-col pb-32">
-      {/* TOP AMBIENT PROJECTION LAYER */}
-      <div className="relative w-full overflow-hidden">
-        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute top-12 right-10 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
-      </div>
+      <div className="flex-grow flex flex-col pb-32">
+        {/* TOP AMBIENT PROJECTION LAYER */}
+        <div className="relative w-full overflow-hidden">
+          <div className="absolute -top-32 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute top-12 right-10 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+        </div>
 
-      <CarteleraFiltros diasDisponibles={diasDisponibles} diaSeleccionado={diaSeleccionado} onSeleccionarDia={setDiaSeleccionado} />
+        {/* 3D Glassy Carousel de Estrenos & Trailers (Replica del video WhatsApp) */}
+        <GlassyCarousel
+          peliculasCatalogo={state.peliculas}
+          onSeleccionarPelicula={(p) => {
+            // Si el usuario elige comprar desde el carrusel, scrolleamos al horario de esa pelicula
+            const el =
+              document.getElementById(`pelicula-${p.idPelicula}`) ||
+              document.getElementById("grid-cartelera");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        />
 
-      <div className="w-full px-space-lg pt-space-lg flex items-end justify-between">
-        <div>
-          <div className="flex items-center gap-space-xs">
-            <div className="w-2 h-6 rounded-full bg-primary"></div>
-            <span className="font-label-code text-label-code text-primary uppercase tracking-wider font-bold">Catálogo En Exhibición</span>
+        <div id="grid-cartelera" className="pt-space-md">
+          <CarteleraFiltros
+            diasDisponibles={diasDisponibles}
+            diaSeleccionado={diaSeleccionado}
+            onSeleccionarDia={setDiaSeleccionado}
+          />
+        </div>
+
+        <div className="w-full px-space-lg pt-space-lg flex items-end justify-between">
+          <div>
+            <div className="flex items-center gap-space-xs">
+              <div className="w-2 h-6 rounded-full bg-primary"></div>
+              <span className="font-label-code text-label-code text-primary uppercase tracking-wider font-bold">
+                Catálogo En Exhibición
+              </span>
+            </div>
+            <h2 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+              Películas en Cartelera
+            </h2>
           </div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Películas en Cartelera</h2>
+          <div className="flex items-center gap-space-xs">
+            <span className="font-label-code text-label-code text-on-surface-variant uppercase">
+              {state.peliculas.length > 0
+                ? `Mostrando ${peliculasVisibles.length} Títulos`
+                : ""}
+            </span>
+            {busqueda && (
+              <button
+                onClick={() => filtrarCartelera({ busqueda: null, dia: null })}
+                className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/30 text-secondary font-label-code text-label-code uppercase tracking-wider hover:bg-secondary-container/50 transition-colors"
+                title="Quitar el filtro"
+              >
+                Filtro: «{filtroCartelera?.busqueda}»
+                <span className="material-symbols-outlined text-[14px]">
+                  close
+                </span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-space-xs">
-          <span className="font-label-code text-label-code text-on-surface-variant uppercase">
-            {state.peliculas.length > 0 ? `Mostrando ${peliculasVisibles.length} Títulos` : ''}
-          </span>
-          {busqueda && (
-            <button
-              onClick={() => filtrarCartelera({ busqueda: null, dia: null })}
-              className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/30 text-secondary font-label-code text-label-code uppercase tracking-wider hover:bg-secondary-container/50 transition-colors"
-              title="Quitar el filtro"
-            >
-              Filtro: «{filtroCartelera?.busqueda}»
-              <span className="material-symbols-outlined text-[14px]">close</span>
-            </button>
-          )}
-        </div>
+
+        <CarteleraGrid
+          cargando={cargando}
+          error={error}
+          peliculas={peliculasVisibles}
+          funcionesPorPelicula={funcionesFiltradasPorDia}
+        />
+
+        <CarteleraPromos />
       </div>
-
-      <CarteleraGrid cargando={cargando} error={error} peliculas={peliculasVisibles} funcionesPorPelicula={funcionesFiltradasPorDia} />
-
-      <CarteleraPromos />
-    </div>
     </div>
   );
 };

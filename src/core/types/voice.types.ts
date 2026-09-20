@@ -63,6 +63,15 @@ export type UiAction =
   | { tipo: 'compra.seleccionar_butacas'; butacas: Butaca[] }
   | { tipo: 'compra.candybar'; items: ItemCandyBarSeleccionado[] }
   | { tipo: 'compra.completada'; venta: Venta | null }
+  /**
+   * La venta ya se creo (el "confirmo" dicho, RF19) y falta cobrarla con tarjeta: lleva a la pantalla de pago, que muestra el formulario
+   * de Stripe para esa venta, y la voz guia al cliente campo por campo. El pago solo se da por hecho cuando el backend lo confirma.
+   */
+  | { tipo: 'pago.abrir'; venta: Venta }
+  /** El cliente dijo "pagar": el formulario envia el cobro (igual que tocar el boton de abajo). */
+  | { tipo: 'pago.enviar' }
+  /** El cliente dijo "cancelar" durante el pago: se cancela la venta pendiente y se liberan los asientos. */
+  | { tipo: 'pago.cancelar' }
   | { tipo: 'compra.reiniciar' }
   /** Saca la pelicula y lo que depende de ella (funcion, butacas); la dulceria se queda. */
   | { tipo: 'compra.quitar_pelicula' }

@@ -1,24 +1,31 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../controllers/AuthContext';
-import { useCine } from '../controllers/CineContext';
-import { BottomHUD } from '../components/widgets/BottomHUD';
-import { TopModeSwitcher } from '../components/widgets/TopModeSwitcher';
-import { EstadoConexion } from '../components/widgets/EstadoConexion';
-import { RelojSistema } from '../components/widgets/RelojSistema';
-import { VoiceStrip } from '../components/voice/VoiceStrip';
-import { useVozSesion, type ModoInteraccion } from '../core/voice/VoiceSessionProvider';
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../controllers/AuthContext";
+import { useCine } from "../controllers/CineContext";
+import { BottomHUD } from "../components/widgets/BottomHUD";
+import { TopModeSwitcher } from "../components/widgets/TopModeSwitcher";
+import { EstadoConexion } from "../components/widgets/EstadoConexion";
+import { RelojSistema } from "../components/widgets/RelojSistema";
+import { VoiceStrip } from "../components/voice/VoiceStrip";
+import {
+  useVozSesion,
+  type ModoInteraccion,
+} from "../core/voice/VoiceSessionProvider";
 
 export type InteractionMode = ModoInteraccion;
 
-const PATHS_WITH_TOP_SWITCHER = ['/', '/cartelera', '/compra'];
-const PATHS_WITH_BOTTOM_HUD = ['/', '/cartelera', '/compra'];
+const PATHS_WITH_TOP_SWITCHER = ["/", "/cartelera", "/compra"];
+const PATHS_WITH_BOTTOM_HUD = ["/", "/cartelera", "/compra"];
 
 /**
  * Pasos reales de `ProcesoCompra.tsx` en orden — "completado" queda afuera a
  * propósito: una vez confirmada la venta no hay paso al que "volver" desde el nav,
  * solo "Volver al Inicio" (ya existe en la propia pantalla de confirmación).
  */
-const PASOS_COMPRA = ['seleccionando_asientos', 'seleccionando_candybar', 'pago'] as const;
+const PASOS_COMPRA = [
+  "seleccionando_asientos",
+  "seleccionando_candybar",
+  "pago",
+] as const;
 type PasoCompra = (typeof PASOS_COMPRA)[number];
 
 export const Layout = () => {
@@ -30,13 +37,13 @@ export const Layout = () => {
   const { modo: interactionMode, setModo, voz } = useVozSesion();
 
   const goHome = () => {
-    dispatch({ type: 'RESETEAR_COMPRA' });
-    navigate('/');
+    dispatch({ type: "RESETEAR_COMPRA" });
+    navigate("/");
   };
 
   const navigateToCartelera = () => {
-    dispatch({ type: 'RESETEAR_COMPRA' });
-    navigate('/cartelera');
+    dispatch({ type: "RESETEAR_COMPRA" });
+    navigate("/cartelera");
   };
 
   /** Voz/Hibrido requieren cuenta de Google — ver Login.tsx. Cartelera/Home nunca pasan por acá. */
@@ -45,17 +52,17 @@ export const Layout = () => {
       accion();
       return;
     }
-    navigate('/login', { state: { from: location } });
+    navigate("/login", { state: { from: location } });
   };
 
   const cambiarModoInteraccion = (m: InteractionMode) => {
-    if (m === 'tactil') {
+    if (m === "tactil") {
       setModo(m);
       return;
     }
     requireAuth(() => {
       setModo(m);
-      if (m === 'voz') navigate('/voz');
+      if (m === "voz") navigate("/voz");
     });
   };
 
@@ -66,43 +73,75 @@ export const Layout = () => {
    * validando "Siguiente" en BottomHUD) — mismo criterio de progreso que ya usa
    * `handleNextStep`/`handleVolver` ahí, no una regla nueva.
    */
-  const indexPasoActual = PASOS_COMPRA.indexOf(state.estadoCompra as PasoCompra);
+  const indexPasoActual = PASOS_COMPRA.indexOf(
+    state.estadoCompra as PasoCompra,
+  );
   const pasoHabilitado = (paso: PasoCompra) =>
-    location.pathname === '/compra' && state.estadoCompra !== 'completado' && PASOS_COMPRA.indexOf(paso) <= indexPasoActual;
+    location.pathname === "/compra" &&
+    state.estadoCompra !== "completado" &&
+    PASOS_COMPRA.indexOf(paso) <= indexPasoActual;
   const irAPaso = (paso: PasoCompra) => {
     if (!pasoHabilitado(paso)) return;
-    dispatch({ type: 'SET_ESTADO_COMPRA', payload: paso });
+    dispatch({ type: "SET_ESTADO_COMPRA", payload: paso });
   };
 
-  const showTopModeSwitcher = PATHS_WITH_TOP_SWITCHER.includes(location.pathname);
+  const showTopModeSwitcher = PATHS_WITH_TOP_SWITCHER.includes(
+    location.pathname,
+  );
   const showBottomHud = PATHS_WITH_BOTTOM_HUD.includes(location.pathname);
   // La barra inferior solo existe con una compra en curso (ver BottomHUD): solo entonces se reserva su espacio abajo.
-  const hayBarraCompra = showBottomHud && !!state.peliculaSeleccionada && state.estadoCompra !== 'completado';
+  const hayBarraCompra =
+    showBottomHud &&
+    !!state.peliculaSeleccionada &&
+    state.estadoCompra !== "completado";
 
   return (
-    <div className={`bg-surface-container-lowest text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col ${hayBarraCompra ? 'pb-32' : ''}`}>
+    <div
+      className={`bg-surface-container-lowest text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col ${hayBarraCompra ? "pb-32" : ""}`}
+    >
       <header className="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
         <div className="h-20 w-full px-space-lg flex items-center justify-between gap-space-md">
           <div className="flex items-center gap-space-lg">
-            <div className="flex items-center gap-space-xs cursor-pointer" onClick={goHome}>
+            <div
+              className="flex items-center gap-space-xs cursor-pointer"
+              onClick={goHome}
+            >
               <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                <span className="material-symbols-outlined text-primary text-[24px]">theater_comedy</span>
+                <span className="material-symbols-outlined text-primary text-[24px]">
+                  theater_comedy
+                </span>
               </div>
               <div className="flex flex-col">
-                <span className="font-headline-sm text-headline-sm tracking-wider text-primary">LUMEN<span className="text-on-surface font-light ml-1">CINEMA</span></span>
-                <span className="font-label-code text-label-code text-secondary tracking-widest uppercase">AI Precision Kiosk</span>
+                <span className="font-headline-sm text-headline-sm tracking-wider text-primary">
+                  LUMEN
+                  <span className="text-on-surface font-light ml-1">
+                    CINEMA
+                  </span>
+                </span>
+                <span className="font-label-code text-label-code text-secondary tracking-widest uppercase">
+                  AI Precision Kiosk
+                </span>
               </div>
             </div>
             {/* La sala de la función elegida: solo aparece cuando ya hay una (antes decía "Sin asignar" todo el tiempo) y solo en
                 pantallas anchas: en las chicas se partía en 4 líneas, y la sala ya figura en el resumen de la compra. */}
             {state.salaSeleccionada && (
-              <div data-testid="sala-asignada" className="hidden 2xl:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-lg bg-surface-container-low whitespace-nowrap">
-                <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
+              <div
+                data-testid="sala-asignada"
+                className="hidden 2xl:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-lg bg-surface-container-low whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-primary text-[18px]">
+                  videocam
+                </span>
                 <div className="flex flex-col">
-                  <span className="font-label-code text-label-code text-on-surface-variant uppercase">Sala Asignada</span>
+                  <span className="font-label-code text-label-code text-on-surface-variant uppercase">
+                    Sala Asignada
+                  </span>
                   <span className="font-label-md text-label-md text-on-surface font-bold">
                     {state.salaSeleccionada.nombre}
-                    {state.salaSeleccionada.tipo ? ` • ${state.salaSeleccionada.tipo}` : ''}
+                    {state.salaSeleccionada.tipo
+                      ? ` • ${state.salaSeleccionada.tipo}`
+                      : ""}
                   </span>
                 </div>
               </div>
@@ -112,61 +151,62 @@ export const Layout = () => {
           <nav className="flex items-center gap-space-xs p-space-2xs bg-surface-container-low rounded-full">
             <button
               onClick={goHome}
-              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === "/" ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Inicio
             </button>
             <button
               onClick={navigateToCartelera}
-              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/cartelera' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === "/cartelera" ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Cartelera
             </button>
-            {usuario && usuario.rol === 'cliente' && (
+            {usuario && usuario.rol === "cliente" && (
               <button
-                onClick={() => navigate('/mis-compras')}
-                className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === '/mis-compras' ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'}`}
+                onClick={() => navigate("/mis-compras")}
+                className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${location.pathname === "/mis-compras" ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]" : "text-on-surface-variant hover:text-on-surface"}`}
               >
                 Mis compras
               </button>
             )}
-            {location.pathname === '/compra' && (
+            {location.pathname === "/compra" && (
               <>
                 <button
-                  onClick={() => irAPaso('seleccionando_asientos')}
-                  disabled={!pasoHabilitado('seleccionando_asientos')}
+                  onClick={() => irAPaso("seleccionando_asientos")}
+                  disabled={!pasoHabilitado("seleccionando_asientos")}
                   className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
-                    state.estadoCompra === 'seleccionando_asientos'
-                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
-                      : pasoHabilitado('seleccionando_asientos')
-                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
-                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                    state.estadoCompra === "seleccionando_asientos"
+                      ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                      : pasoHabilitado("seleccionando_asientos")
+                        ? "text-on-surface-variant hover:text-on-surface cursor-pointer"
+                        : "text-on-surface-variant/40 cursor-not-allowed"
                   }`}
                 >
                   Asientos
                 </button>
                 <button
-                  onClick={() => irAPaso('seleccionando_candybar')}
-                  disabled={!pasoHabilitado('seleccionando_candybar')}
+                  onClick={() => irAPaso("seleccionando_candybar")}
+                  disabled={!pasoHabilitado("seleccionando_candybar")}
                   className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
-                    state.estadoCompra === 'seleccionando_candybar'
-                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
-                      : pasoHabilitado('seleccionando_candybar')
-                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
-                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                    state.estadoCompra === "seleccionando_candybar"
+                      ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                      : pasoHabilitado("seleccionando_candybar")
+                        ? "text-on-surface-variant hover:text-on-surface cursor-pointer"
+                        : "text-on-surface-variant/40 cursor-not-allowed"
                   }`}
                 >
                   Candy Bar & VIP
                 </button>
                 <button
-                  onClick={() => irAPaso('pago')}
-                  disabled={!pasoHabilitado('pago')}
+                  onClick={() => irAPaso("pago")}
+                  disabled={!pasoHabilitado("pago")}
                   className={`px-space-md py-space-xs rounded-full font-label-md text-label-md transition-all ${
-                    state.estadoCompra === 'pago' || state.estadoCompra === 'completado'
-                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]'
-                      : pasoHabilitado('pago')
-                        ? 'text-on-surface-variant hover:text-on-surface cursor-pointer'
-                        : 'text-on-surface-variant/40 cursor-not-allowed'
+                    state.estadoCompra === "pago" ||
+                    state.estadoCompra === "completado"
+                      ? "bg-primary-container text-on-primary-container font-bold shadow-[0_0_16px_rgba(245,158,11,0.4)]"
+                      : pasoHabilitado("pago")
+                        ? "text-on-surface-variant hover:text-on-surface cursor-pointer"
+                        : "text-on-surface-variant/40 cursor-not-allowed"
                   }`}
                 >
                   Pago & Salida
@@ -179,7 +219,9 @@ export const Layout = () => {
             {/* El microfono figura activo solo cuando de verdad lo esta (modos de voz con la conversacion en marcha). */}
             <EstadoConexion modo={interactionMode} voz={voz} />
             <div className="hidden lg:flex items-center gap-space-2xs px-space-sm py-space-xs rounded-lg bg-surface-container">
-              <span className="material-symbols-outlined text-secondary text-[16px]">schedule</span>
+              <span className="material-symbols-outlined text-secondary text-[16px]">
+                schedule
+              </span>
               <RelojSistema />
             </div>
             <div className="flex items-center px-space-xs py-space-2xs rounded-lg bg-surface-container-high text-on-surface font-label-code text-label-code font-bold tracking-wider">
@@ -191,38 +233,57 @@ export const Layout = () => {
                 type="button"
                 className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors"
               >
-                <span className="material-symbols-outlined text-[16px]">logout</span>
+                <span className="material-symbols-outlined text-[16px]">
+                  logout
+                </span>
                 <span className="hidden sm:flex flex-col items-start leading-tight">
-                  <span className="font-label-md text-label-md font-bold">{usuario.nombre}</span>
+                  <span className="font-label-md text-label-md font-bold">
+                    {usuario.nombre}
+                  </span>
                   <span className="font-label-code text-label-code text-on-surface-variant uppercase">
-                    {usuario.rol === 'administrador' ? 'Administrador' : 'Cliente'}
+                    {usuario.rol === "administrador"
+                      ? "Administrador"
+                      : "Cliente"}
                   </span>
                 </span>
               </button>
             ) : (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate("/login")}
                 type="button"
                 className="flex items-center gap-space-2xs h-8 px-space-sm rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-[0_0_12px_rgba(255,193,116,0.3)]"
               >
-                <span className="material-symbols-outlined text-[16px]">login</span>
+                <span className="material-symbols-outlined text-[16px]">
+                  login
+                </span>
                 <span className="hidden sm:inline">Iniciar sesión</span>
               </button>
             )}
-            <div onClick={() => navigate('/admin')} className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(255,193,116,0.3)] cursor-pointer">
-              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+            <div
+              onClick={() => navigate("/admin")}
+              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(255,193,116,0.3)] cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-on-primary text-[18px]">
+                person
+              </span>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="w-full pt-20 flex-grow flex flex-col bg-surface-container-lowest relative z-10">
+      <main className="w-full pt-20 flex-grow flex flex-col bg-surface-container-lowest relative">
         <div className="w-full h-full flex-grow flex flex-col relative">
           {/* Selector de modo + panel de voz (solo en "Voz + UI Dinámica"): quedan juntos y fijos arriba mientras se navega. */}
-          {(showTopModeSwitcher || interactionMode === 'hibrido') && (
+          {(showTopModeSwitcher || interactionMode === "hibrido") && (
             <div className="sticky top-20 z-20 bg-surface-container-lowest">
-              {showTopModeSwitcher && <TopModeSwitcher mode={interactionMode} onChangeMode={cambiarModoInteraccion} voz={voz} />}
-              {interactionMode === 'hibrido' && <VoiceStrip voz={voz} />}
+              {showTopModeSwitcher && (
+                <TopModeSwitcher
+                  mode={interactionMode}
+                  onChangeMode={cambiarModoInteraccion}
+                  voz={voz}
+                />
+              )}
+              {interactionMode === "hibrido" && <VoiceStrip voz={voz} />}
             </div>
           )}
           <Outlet />
@@ -232,17 +293,30 @@ export const Layout = () => {
       <footer className="w-full bg-surface-container-lowest py-space-xl shadow-[0_-4px_24px_rgba(0,0,0,0.6)] relative z-20 mt-auto">
         <div className="w-full px-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md">
           <div className="flex items-center gap-space-md">
-            <span className="font-headline-sm text-headline-sm text-primary">LUMEN</span>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">Sistemas de Kiosco Inteligente y Proyección Cinema NextGen © {new Date().getFullYear()}. Todos los derechos reservados.</p>
+            <span className="font-headline-sm text-headline-sm text-primary">
+              LUMEN
+            </span>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              Sistemas de Kiosco Inteligente y Proyección Cinema NextGen ©{" "}
+              {new Date().getFullYear()}. Todos los derechos reservados.
+            </p>
           </div>
           <div className="flex items-center gap-space-lg">
             <div className="flex items-center gap-space-xs text-error">
-              <span className="material-symbols-outlined text-[18px]">gpp_maybe</span>
-              <span className="font-label-code text-label-code uppercase tracking-wider text-error">Entradas No Reembolsables</span>
+              <span className="material-symbols-outlined text-[18px]">
+                gpp_maybe
+              </span>
+              <span className="font-label-code text-label-code uppercase tracking-wider text-error">
+                Entradas No Reembolsables
+              </span>
             </div>
             <div className="flex items-center gap-space-xs text-on-surface-variant">
-              <span className="material-symbols-outlined text-secondary text-[18px]">bolt</span>
-              <span className="font-label-code text-label-code uppercase tracking-wider">Dolby Atmos & Laser Certified</span>
+              <span className="material-symbols-outlined text-secondary text-[18px]">
+                bolt
+              </span>
+              <span className="font-label-code text-label-code uppercase tracking-wider">
+                Dolby Atmos & Laser Certified
+              </span>
             </div>
           </div>
         </div>

@@ -20,8 +20,15 @@ Conectado end-to-end contra el backend real (NestJS + Supabase), no un mockup:
 
 **Pendiente conocido** (ver `AGENTS.md` del repo `BackendParcial1` para detalle): dulcería
 sigue con productos hardcodeados en el carrito (el backend ya tiene el CRUD real, falta
-conectarlo), `/admin/console` no tiene guard de rol en el frontend, y la confirmación de
-no-reembolso (RF03) está fija en `true` en vez de un checkbox real.
+conectarlo) y `/admin/console` no tiene guard de rol en el frontend.
+
+**Pago (2026-09-19):** el paso de pago ahora es real. Se paga con **tarjeta (Stripe, modo prueba)** o en
+**efectivo**. La tarjeta virtual gira al escribir el CVV y se pone verde al aprobarse, y con la voz el agente
+guía campo por campo. La aceptación de no-reembolso (RF03) es una casilla real. El frontend **no necesita
+ninguna variable de Stripe**: la clave publicable se la pide al backend (`GET /pagos/config`); las claves
+`STRIPE_*` van solo en el `.env` del backend. Sin claves queda solo el efectivo. Después de un `git pull`
+hay que reinstalar dependencias (se agregaron `@stripe/stripe-js` y `@stripe/react-stripe-js`): `npm install`,
+o `docker compose up -d --build frontend`.
 
 ## Correr en local
 
