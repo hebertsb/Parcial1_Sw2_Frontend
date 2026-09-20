@@ -75,7 +75,7 @@ const CampoVidrio = ({
               : 'border-white/10 hover:border-white/25'
       }`}
     >
-      <span className={`material-symbols-outlined text-[20px] transition-colors ${enfocado || guia ? 'text-primary' : 'text-on-surface-variant'}`}>{icono}</span>
+      <span className={`material-symbols-outlined text-[20px]! transition-colors ${enfocado || guia ? 'text-primary' : 'text-on-surface-variant'}`}>{icono}</span>
       <div className="min-w-0 flex-1">{children}</div>
       {derecha}
     </div>
@@ -85,7 +85,7 @@ const CampoVidrio = ({
 
 const InsigniaSeguridad = ({ icono, texto }: { icono: string; texto: string }) => (
   <span className="inline-flex items-center gap-1.5 font-label-code text-[10.5px] uppercase tracking-wider text-on-surface-variant/70">
-    <span className="material-symbols-outlined text-[15px] text-tertiary">{icono}</span>
+    <span className="material-symbols-outlined text-[15px]! text-tertiary">{icono}</span>
     {texto}
   </span>
 );
@@ -424,7 +424,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
         <div className="mb-space-lg flex flex-wrap items-center justify-between gap-space-sm">
           <div className="flex items-center gap-space-sm">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-container/15 text-primary ring-1 ring-primary-container/40">
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+              <span className="material-symbols-outlined text-[22px]!" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
             </span>
             <div className="flex flex-col leading-tight">
               <span className="font-headline-md text-headline-md tracking-tight text-on-surface">Pago seguro</span>
@@ -435,7 +435,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
           <div className="flex flex-wrap items-center gap-space-xs">
             {porVoz && (
               <span data-testid="pago-guia-voz" className="inline-flex items-center gap-1.5 rounded-full bg-primary-container/15 px-space-sm py-1 font-label-code text-label-code uppercase tracking-wider text-primary ring-1 ring-primary-container/40">
-                <span className="material-symbols-outlined animate-pulse text-[16px]">graphic_eq</span>
+                <span className="material-symbols-outlined animate-pulse text-[16px]!">graphic_eq</span>
                 Lumen te guía por voz
               </span>
             )}
@@ -457,7 +457,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
                       activo ? 'bg-primary-container text-on-primary-container shadow-[0_0_18px_rgba(245,158,11,0.4)]' : 'text-on-surface-variant hover:text-on-surface'
                     } disabled:cursor-not-allowed disabled:opacity-40`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">{opcion === 'tarjeta' ? 'credit_card' : 'payments'}</span>
+                    <span className="material-symbols-outlined text-[18px]!">{opcion === 'tarjeta' ? 'credit_card' : 'payments'}</span>
                     {opcion === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
                   </button>
                 );
@@ -478,14 +478,14 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
                   onClick={() => setReversoManual((valor) => !valor)}
                   className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-space-md py-1.5 font-label-md text-label-md text-on-surface-variant ring-1 ring-white/10 transition-colors hover:text-primary"
                 >
-                  <span className="material-symbols-outlined text-[18px]">flip</span>
+                  <span className="material-symbols-outlined text-[18px]!">flip</span>
                   {volteada ? 'Ver frente' : 'Ver reverso (CVV)'}
                 </button>
               </>
             ) : (
               <div className="flex w-full max-w-[380px] flex-col items-center gap-space-md rounded-2xl bg-white/[0.04] p-space-xl text-center ring-1 ring-white/10">
                 <span className="grid h-20 w-20 place-items-center rounded-full bg-primary-container/15 text-primary shadow-[0_0_40px_rgba(245,158,11,0.3)] ring-1 ring-primary-container/40">
-                  <span className="material-symbols-outlined text-[42px]">{fase === 'exito' ? 'check_circle' : 'payments'}</span>
+                  <span className="material-symbols-outlined text-[42px]!">{fase === 'exito' ? 'check_circle' : 'payments'}</span>
                 </span>
                 <span className="font-headline-sm text-headline-sm text-on-surface">Pago en efectivo</span>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">Al confirmar, tu compra queda registrada y recibís tu entrada digital. Sin datos de tarjeta.</p>
@@ -495,29 +495,46 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
               <InsigniaSeguridad icono="lock" texto="Conexión cifrada TLS" />
               <InsigniaSeguridad icono="verified_user" texto="Procesado por Stripe · PCI-DSS nivel 1" />
             </div>
+
+            {metodo === 'tarjeta' && modoPrueba && (
+              <div data-testid="pago-modo-prueba" className="flex w-full max-w-[380px] flex-wrap items-center justify-between gap-space-xs rounded-xl bg-secondary/10 px-space-sm py-space-xs ring-1 ring-secondary/30">
+                <span className="font-label-code text-label-code uppercase tracking-wider text-secondary">Modo prueba · no se cobra dinero real</span>
+                <button type="button" onClick={copiarTarjetaDePrueba} className="inline-flex items-center gap-1 font-label-md text-label-md font-semibold text-secondary transition-colors hover:text-white">
+                  <span className="material-symbols-outlined text-[16px]!">{copiado ? 'check' : 'content_copy'}</span>
+                  {copiado ? 'Copiada' : `Copiar ${TARJETA_DE_PRUEBA}`}
+                </button>
+              </div>
+            )}
+
+            {/* RF03: aceptación real de la política de no reembolso (por voz ya se aceptó al decir «confirmo»). */}
+            {porVoz ? (
+              <div className="flex w-full max-w-[380px] items-center gap-space-xs rounded-xl bg-error-container/15 px-space-sm py-space-xs font-body-sm text-body-sm text-on-error-container ring-1 ring-error/20">
+                <span className="material-symbols-outlined text-[18px]! text-error">gpp_maybe</span>
+                Aceptaste por voz que las entradas no tienen reembolso.
+              </div>
+            ) : (
+              <label className="flex w-full max-w-[380px] cursor-pointer items-start gap-space-sm rounded-xl bg-error-container/15 px-space-sm py-space-xs ring-1 ring-error/20 transition-colors hover:bg-error-container/25">
+                <input
+                  type="checkbox"
+                  data-testid="pago-acepta-noreembolso"
+                  checked={acepta}
+                  disabled={ocupado}
+                  onChange={(e) => setAcepta(e.target.checked)}
+                  className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#f59e0b]"
+                />
+                <span className="font-body-sm text-body-sm text-on-error-container">
+                  Entiendo que <strong className="text-on-surface">las entradas no tienen reembolso ni cambios</strong> una vez pagadas.
+                </span>
+              </label>
+            )}
           </div>
 
           {/* ----- derecha: los datos ----- */}
           <div className="relative flex flex-col gap-space-xs">
-            <div className="mb-space-2xs">
-              <h2 className="font-headline-md text-headline-md tracking-tight text-on-surface">Detalles del pago</h2>
-              <p className="font-body-sm text-body-sm text-on-surface-variant/80">
-                {metodo === 'tarjeta' ? 'Los datos de tu tarjeta se escriben en campos seguros de Stripe.' : 'Confirmá los datos de tu compra para pagar en efectivo.'}
-              </p>
-            </div>
+            <h2 className="mb-space-2xs font-headline-md text-headline-md tracking-tight text-on-surface">Detalles del pago</h2>
 
             {metodo === 'tarjeta' && (
               <>
-                {modoPrueba && (
-                  <div data-testid="pago-modo-prueba" className="mb-space-2xs flex flex-wrap items-center justify-between gap-space-xs rounded-xl bg-secondary/10 px-space-sm py-space-xs ring-1 ring-secondary/30">
-                    <span className="font-label-code text-label-code uppercase tracking-wider text-secondary">Modo prueba · no se cobra dinero real</span>
-                    <button type="button" onClick={copiarTarjetaDePrueba} className="inline-flex items-center gap-1 font-label-md text-label-md font-semibold text-secondary transition-colors hover:text-white">
-                      <span className="material-symbols-outlined text-[16px]">{copiado ? 'check' : 'content_copy'}</span>
-                      {copiado ? 'Copiada' : `Copiar ${TARJETA_DE_PRUEBA}`}
-                    </button>
-                  </div>
-                )}
-
                 <CampoVidrio etiqueta="Nombre del titular" icono="person" enfocado={titularEnfocado} guia={false} error={null} testId="pago-campo-titular">
                   <input
                     value={titular}
@@ -579,28 +596,6 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
               </span>
             </div>
 
-            {/* RF03: aceptación real de la política de no reembolso (por voz ya se aceptó al decir «confirmo»). */}
-            {porVoz ? (
-              <div className="flex items-center gap-space-xs rounded-xl bg-error-container/15 px-space-sm py-space-xs font-body-sm text-body-sm text-on-error-container ring-1 ring-error/20">
-                <span className="material-symbols-outlined text-[18px] text-error">gpp_maybe</span>
-                Aceptaste por voz que las entradas no tienen reembolso.
-              </div>
-            ) : (
-              <label className="flex cursor-pointer items-start gap-space-sm rounded-xl bg-error-container/15 px-space-sm py-space-xs ring-1 ring-error/20 transition-colors hover:bg-error-container/25">
-                <input
-                  type="checkbox"
-                  data-testid="pago-acepta-noreembolso"
-                  checked={acepta}
-                  disabled={ocupado}
-                  onChange={(e) => setAcepta(e.target.checked)}
-                  className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#f59e0b]"
-                />
-                <span className="font-body-sm text-body-sm text-on-error-container">
-                  Entiendo que <strong className="text-on-surface">las entradas no tienen reembolso ni cambios</strong> una vez pagadas.
-                </span>
-              </label>
-            )}
-
             <AnimatePresence>
               {aviso && (
                 <motion.div
@@ -614,12 +609,14 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
                     aviso.tipo === 'error' ? 'bg-error-container/30 text-on-error-container ring-error/30' : 'bg-secondary/10 text-secondary ring-secondary/30'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">{aviso.tipo === 'error' ? 'error' : 'info'}</span>
+                  <span className="material-symbols-outlined text-[18px]!">{aviso.tipo === 'error' ? 'error' : 'info'}</span>
                   {aviso.texto}
                 </motion.div>
               )}
             </AnimatePresence>
 
+            {/* El panel se armó para que TODO entre en una pantalla de kiosco (~1000 px de alto) sin scroll: a la derecha solo lo que se completa,
+                el total y este botón; la casilla de no-reembolso, el aviso de modo prueba y las insignias van a la izquierda, bajo la tarjeta. */}
             <button
               type="button"
               data-testid="pago-boton"
@@ -629,7 +626,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
             >
               <span className="absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-white/30 opacity-0 blur-md transition-all duration-700 group-hover:left-full group-hover:opacity-100" />
               <span className="relative">{metodo === 'tarjeta' ? `Pagar ${total.toFixed(2)} Bs` : 'Confirmar pago en efectivo'}</span>
-              <span className="material-symbols-outlined relative text-[24px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+              <span className="material-symbols-outlined relative text-[24px]! transition-transform group-hover:translate-x-1">arrow_forward</span>
             </button>
 
             <button
@@ -639,7 +636,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
               onClick={() => void cancelar('tactil')}
               className="mx-auto mt-space-2xs inline-flex items-center gap-1 font-label-md text-label-md text-on-surface-variant transition-colors hover:text-primary disabled:opacity-40"
             >
-              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span className="material-symbols-outlined text-[16px]!">arrow_back</span>
               {state.ventaPendiente ? 'Cancelar y liberar mis asientos' : 'Volver al Candy Bar'}
             </button>
 
@@ -652,11 +649,11 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   data-testid={fase === 'exito' ? 'pago-exito' : 'pago-procesando'}
-                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-space-md rounded-2xl bg-[#07080b]/80 text-center backdrop-blur-md"
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-space-md rounded-2xl bg-[#07080b]/80 text-center backdrop-blur-md"
                 >
                   {fase === 'exito' ? (
                     <>
-                      <span className="material-symbols-outlined animate-[pop_0.5s_ease-out] text-[64px] text-tertiary drop-shadow-[0_0_18px_rgba(86,229,169,0.6)]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      <span className="material-symbols-outlined animate-[pop_0.5s_ease-out] text-[64px]! text-tertiary drop-shadow-[0_0_18px_rgba(86,229,169,0.6)]" style={{ fontVariationSettings: "'FILL' 1" }}>
                         check_circle
                       </span>
                       <div className="flex flex-col gap-1 px-space-md">
@@ -666,7 +663,7 @@ const PagoInterno = ({ stripe, elements, tarjetaHabilitada, modoPrueba }: PagoIn
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined animate-spin text-[40px] text-primary">progress_activity</span>
+                      <span className="material-symbols-outlined animate-spin text-[40px]! text-primary">progress_activity</span>
                       <span className="font-label-lg text-label-lg uppercase tracking-[0.18em] text-on-surface">Procesando transacción segura…</span>
                       <span className="relative h-1 w-48 overflow-hidden rounded-full bg-white/10">
                         <span className="absolute inset-y-0 left-0 w-1/3 animate-[barrido_1.4s_ease-in-out_infinite] rounded-full bg-primary-container" />

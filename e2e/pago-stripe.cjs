@@ -214,6 +214,14 @@ async function tactilTarjetaAprobada(browser) {
   verificar(E, 'el botón de la barra de abajo no está: el cobro se hace con el botón del formulario', (await page.getByTestId('barra-pago-estado').count()) === 1 && (await page.getByText('Ir al Candy Bar').count()) === 0);
   verificar(E, 'sin datos ni aceptar la política de no reembolso el botón Pagar está deshabilitado', await page.getByTestId('pago-boton').isDisabled());
   await captura(page, '1-formulario-vacio');
+  const botonCaja = await page.getByTestId('pago-boton').boundingBox();
+  const barraCaja = await page.getByTestId('barra-compra').boundingBox();
+  verificar(E, 'el botón Pagar está SIEMPRE a la vista: no queda tapado por la barra de abajo (pantalla de 1000 px de alto)', !!botonCaja && !!barraCaja && botonCaja.y >= 0 && botonCaja.y + botonCaja.height <= barraCaja.y + 1, JSON.stringify({ botonCaja, barraCaja }));
+  // Todo lo esencial entra en una pantalla de kiosco SIN scroll: la casilla de no-reembolso, el botón y el enlace de cancelar quedan sobre la barra.
+  const casilla = await page.getByTestId('pago-acepta-noreembolso').boundingBox();
+  const cancelarCaja = await page.getByTestId('pago-cancelar').boundingBox();
+  const sobreLaBarra = (c) => !!c && c.y >= 0 && c.y + c.height <= barraCaja.y + 1;
+  verificar(E, 'la casilla del no-reembolso, el botón Pagar y «cancelar» se ven completos SIN hacer scroll (todos sobre la barra de abajo)', sobreLaBarra(casilla) && sobreLaBarra(botonCaja) && sobreLaBarra(cancelarCaja), JSON.stringify({ casilla, botonCaja, cancelarCaja, barraCaja }));
 
   await campo(page, 'cardNumber').fill(TARJETA);
   verificar(E, 'al completar el número los puntos de la tarjeta quedan "completo" y aparece la marca (visa)', (await page.getByTestId('tarjeta-numero').getAttribute('data-estado')) === 'completo' && /visa/i.test(await page.getByTestId('pago-campo-numero').innerText()));
@@ -240,8 +248,10 @@ async function tactilTarjetaAprobada(browser) {
   verificar(E, 'se ve "Procesando transacción segura…" mientras se cobra', /procesando transacción segura/i.test(await page.getByTestId('pago-procesando').innerText())); // innerText respeta el uppercase del CSS
   verificar(E, 'y la barra de abajo también lo muestra', /Procesando pago/.test(await page.getByTestId('barra-pago-estado').innerText()));
   await page.getByTestId('pago-exito').waitFor({ timeout: 10000 });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(900); // que termine la animación del check
   await captura(page, '5-pago-exitoso');
+  const tamCheck = await page.getByTestId('pago-exito').locator('.material-symbols-outlined').first().evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  verificar(E, 'el check de "Pago exitoso" se ve grande (los íconos con text-[..px] a secas se quedan en 24 px por la hoja de Google Fonts)', tamCheck >= 48, `fontSize=${tamCheck}`);
   verificar(E, 'al aprobarse: "¡Pago exitoso!" y la tarjeta se vuelve verde con el check', /Pago exitoso/.test(await page.getByTestId('pago-exito').innerText()) && (await page.locator('[data-testid="tarjeta-virtual"] .text-tertiary').count()) >= 1);
   await page.getByText('¡Compra Confirmada con Éxito!').waitFor({ timeout: 10000 });
 

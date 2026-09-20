@@ -38,7 +38,7 @@ const MarcaTarjeta = ({ marca }: { marca: string }) => {
     case 'amex':
       return <span className="rounded border border-sky-200/60 px-1.5 py-0.5 text-[15px] font-black tracking-[0.2em] text-sky-100">AMEX</span>;
     case 'unknown':
-      return <span className="material-symbols-outlined text-[30px] text-white/25">credit_card</span>;
+      return <span className="material-symbols-outlined text-[30px]! text-white/25">credit_card</span>;
     default:
       return <span className="text-[15px] font-bold uppercase tracking-widest text-white/80">{marca}</span>;
   }
@@ -95,7 +95,7 @@ export const TarjetaVirtual = ({ titular, marca, numero, vencimiento, cvc, volte
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <Chip />
-                <span className="material-symbols-outlined rotate-90 text-[22px] text-white/60">contactless</span>
+                <span className="material-symbols-outlined rotate-90 text-[22px]! text-white/60">contactless</span>
               </div>
               <span className="font-label-code text-[11px] font-bold uppercase tracking-[0.3em] text-primary">Lumen Pass</span>
             </div>
@@ -129,7 +129,7 @@ export const TarjetaVirtual = ({ titular, marca, numero, vencimiento, cvc, volte
 
           {aprobada && (
             <div className="absolute inset-0 grid place-items-center bg-[#0b3d2b]/40 backdrop-blur-[1px]">
-              <span className="material-symbols-outlined animate-[pop_0.5s_ease-out] text-[72px] text-tertiary drop-shadow-[0_0_18px_rgba(86,229,169,0.65)]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined animate-[pop_0.5s_ease-out] text-[72px]! text-tertiary drop-shadow-[0_0_18px_rgba(86,229,169,0.65)]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 check_circle
               </span>
             </div>
