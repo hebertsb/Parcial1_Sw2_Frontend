@@ -130,7 +130,7 @@ export const AdminReportes = () => {
       <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
       <div className="flex items-end gap-space-xs">
         <span className={`font-display-hero text-[36px] leading-tight text-${color}`}>{valor}</span>
-        {variacion && (
+        {variacion && variacion.variacionPorcentual !== null && (
           <span
             className={`font-label-md text-label-md ${
               variacion.variacionPorcentual.startsWith('-') ? 'text-green-600' : 'text-red-600'
