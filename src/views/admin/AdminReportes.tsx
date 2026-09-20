@@ -6,6 +6,10 @@ import {
   obtenerReportePorFuncion,
   obtenerReportePorProducto,
   obtenerDashboard,
+  obtenerSerieTemporal,
+  obtenerReportePorPeliculaPaginado,
+  obtenerReportePorFuncionPaginado,
+  obtenerReportePorProductoPaginado,
 } from '../../api/reportes.api';
 import type {
   RangoFechas,
@@ -15,51 +19,89 @@ import type {
   ReportePorProducto,
   DashboardResponse,
   DashboardMetrica,
+  SerieTemporalPunto,
+  PaginatedResponse,
 } from '../../core/types/reporte.types';
 import { ReportesTablaPelicula, ReportesTablaFuncion, ReportesTablaProducto } from './ReportesTablas';
+import { ReportesChart } from './ReportesChart';
 
 /** CU05/RF08 — reportes reales (`GET /reportes/*`), reemplaza la telemetría hardcodeada. */
 export const AdminReportes = () => {
   const { token } = useAuth();
-  const [filtro, setFiltro] = useState<RangoFechas>({});
+  const [filtro, setFiltro] = useState<RangoFechas>({
+    agrupacion: 'dia',
+    limit: 50,
+    offset: 0,
+  });
   const [resumen, setResumen] = useState<ResumenVentas | null>(null);
   const [porPelicula, setPorPelicula] = useState<ReportePorPelicula[]>([]);
   const [porFuncion, setPorFuncion] = useState<ReportePorFuncion[]>([]);
   const [porProducto, setPorProducto] = useState<ReportePorProducto[]>([]);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [serieTemporal, setSerieTemporal] = useState<SerieTemporalPunto[]>([]);
+  const [paginacion, setPaginacion] = useState<{
+    pelicula: PaginatedResponse<ReportePorPelicula> | null;
+    funcion: PaginatedResponse<ReportePorFuncion> | null;
+    producto: PaginatedResponse<ReportePorProducto> | null;
+  }>({
+    pelicula: null,
+    funcion: null,
+    producto: null,
+  });
   const [cargando, setCargando] = useState(false);
+
+  const cargarReportes = async () => {
+    if (!token) return;
+    let cancelado = false;
+    setCargando(true);
+    try {
+      const [
+        resumenVentas,
+        ventasPorPelicula,
+        ventasPorFuncion,
+        ventasPorProducto,
+        dashboardData,
+        serieTemporalData,
+        peliculaPaginada,
+        funcionPaginada,
+        productoPaginada,
+      ] = await Promise.all([
+        obtenerResumenVentas(filtro, token),
+        obtenerReportePorPelicula(filtro, token),
+        obtenerReportePorFuncion(filtro, token),
+        obtenerReportePorProducto(filtro, token),
+        obtenerDashboard(filtro, token),
+        obtenerSerieTemporal(filtro, token),
+        obtenerReportePorPeliculaPaginado(filtro, token),
+        obtenerReportePorFuncionPaginado(filtro, token),
+        obtenerReportePorProductoPaginado(filtro, token),
+      ]);
+      if (!cancelado) {
+        setResumen(resumenVentas);
+        setPorPelicula(ventasPorPelicula);
+        setPorFuncion(ventasPorFuncion);
+        setPorProducto(ventasPorProducto);
+        setDashboard(dashboardData);
+        setSerieTemporal(serieTemporalData);
+        setPaginacion({
+          pelicula: peliculaPaginada,
+          funcion: funcionPaginada,
+          producto: productoPaginada,
+        });
+      }
+    } catch (error) {
+      console.error('No se pudieron cargar los reportes reales.', error);
+    } finally {
+      if (!cancelado) setCargando(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) return;
     let cancelado = false;
     (async () => {
-      setCargando(true);
-      try {
-        const [
-          resumenVentas,
-          ventasPorPelicula,
-          ventasPorFuncion,
-          ventasPorProducto,
-          dashboardData,
-        ] = await Promise.all([
-          obtenerResumenVentas(filtro, token),
-          obtenerReportePorPelicula(filtro, token),
-          obtenerReportePorFuncion(filtro, token),
-          obtenerReportePorProducto(filtro, token),
-          obtenerDashboard(filtro, token),
-        ]);
-        if (!cancelado) {
-          setResumen(resumenVentas);
-          setPorPelicula(ventasPorPelicula);
-          setPorFuncion(ventasPorFuncion);
-          setPorProducto(ventasPorProducto);
-          setDashboard(dashboardData);
-        }
-      } catch (error) {
-        console.error('No se pudieron cargar los reportes reales.', error);
-      } finally {
-        if (!cancelado) setCargando(false);
-      }
+      await cargarReportes();
+      if (!cancelado) setCargando(false);
     })();
     return () => {
       cancelado = true;
@@ -94,6 +136,15 @@ export const AdminReportes = () => {
     </div>
   );
 
+  const handlePageChange = (tipo: 'pelicula' | 'funcion' | 'producto', direction: 'prev' | 'next') => {
+    const current = paginacion[tipo];
+    if (!current) return;
+    const newOffset = direction === 'next' ? current.offset + current.limit : Math.max(0, current.offset - current.limit);
+    if (direction === 'prev' && current.offset === 0) return;
+    if (direction === 'next' && !current.hasMore) return;
+    setFiltro((f) => ({ ...f, offset: newOffset }));
+  };
+
   return (
     <div className="p-space-xl flex flex-col gap-space-xl">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
@@ -101,7 +152,7 @@ export const AdminReportes = () => {
           <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">CU05 • Datos reales</span>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Reportes de Ventas</h1>
         </div>
-        <div className="flex items-center gap-space-sm">
+        <div className="flex flex-wrap items-center gap-space-sm">
           <input
             type="date"
             value={filtro.desde ?? ''}
@@ -115,6 +166,25 @@ export const AdminReportes = () => {
             onChange={(e) => setFiltro((f) => ({ ...f, hasta: e.target.value || undefined }))}
             className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
           />
+          <select
+            value={filtro.agrupacion ?? 'dia'}
+            onChange={(e) => setFiltro((f) => ({ ...f, agrupacion: e.target.value as 'dia' | 'semana' | 'mes' }))}
+            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
+          >
+            <option value="dia">Por día</option>
+            <option value="semana">Por semana</option>
+            <option value="mes">Por mes</option>
+          </select>
+          <select
+            value={String(filtro.limit ?? 50)}
+            onChange={(e) => setFiltro((f) => ({ ...f, limit: Number(e.target.value), offset: 0 }))}
+            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
+          >
+            <option value="10">10 por página</option>
+            <option value="25">25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+          </select>
         </div>
       </div>
 
@@ -162,9 +232,102 @@ export const AdminReportes = () => {
         </div>
       )}
 
-      <ReportesTablaPelicula filas={porPelicula} />
-      <ReportesTablaFuncion filas={porFuncion} />
-      <ReportesTablaProducto filas={porProducto} />
+      {serieTemporal.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
+          <ReportesChart
+            data={serieTemporal}
+            tipo="linea"
+            metrica="montoTotal"
+            titulo="Tendencia de monto recaudado"
+          />
+          <ReportesChart
+            data={serieTemporal}
+            tipo="barras"
+            metrica="cantidadEntradas"
+            titulo="Entradas vendidas por periodo"
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-space-md">
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por película</h2>
+          {paginacion.pelicula && (
+            <div className="flex items-center gap-space-sm">
+              <button
+                onClick={() => handlePageChange('pelicula', 'prev')}
+                disabled={paginacion.pelicula.offset === 0}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">
+                Página {Math.floor(paginacion.pelicula.offset / paginacion.pelicula.limit) + 1} de {Math.ceil(paginacion.pelicula.total / paginacion.pelicula.limit)}
+              </span>
+              <button
+                onClick={() => handlePageChange('pelicula', 'next')}
+                disabled={!paginacion.pelicula.hasMore}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </div>
+        <ReportesTablaPelicula filas={porPelicula} />
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por función</h2>
+          {paginacion.funcion && (
+            <div className="flex items-center gap-space-sm">
+              <button
+                onClick={() => handlePageChange('funcion', 'prev')}
+                disabled={paginacion.funcion.offset === 0}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">
+                Página {Math.floor(paginacion.funcion.offset / paginacion.funcion.limit) + 1} de {Math.ceil(paginacion.funcion.total / paginacion.funcion.limit)}
+              </span>
+              <button
+                onClick={() => handlePageChange('funcion', 'next')}
+                disabled={!paginacion.funcion.hasMore}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </div>
+        <ReportesTablaFuncion filas={porFuncion} />
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por producto (dulcería)</h2>
+          {paginacion.producto && (
+            <div className="flex items-center gap-space-sm">
+              <button
+                onClick={() => handlePageChange('producto', 'prev')}
+                disabled={paginacion.producto.offset === 0}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">
+                Página {Math.floor(paginacion.producto.offset / paginacion.producto.limit) + 1} de {Math.ceil(paginacion.producto.total / paginacion.producto.limit)}
+              </span>
+              <button
+                onClick={() => handlePageChange('producto', 'next')}
+                disabled={!paginacion.producto.hasMore}
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </div>
+        <ReportesTablaProducto filas={porProducto} />
+      </div>
     </div>
   );
 };

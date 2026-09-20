@@ -39,14 +39,17 @@ export interface ReportePorProducto {
   montoTotal: string;
 }
 
-export interface DashboardMetrica {
-  actual: number;
-  anterior: number;
-  variacionPorcentual: string;
+export interface SerieTemporalPunto {
+  fecha: string;
+  montoTotal: string;
+  cantidadEntradas: number;
+  totalVentas: number;
 }
 
-export interface DashboardResponse {
-  montoTotal: DashboardMetrica;
-  totalVentas: DashboardMetrica;
-  cantidadEntradas: DashboardMetrica;
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 }
