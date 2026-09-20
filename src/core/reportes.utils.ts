@@ -101,10 +101,10 @@ export function capitalizar(texto: string): string {
 /**
  * Exporta un array de objetos a CSV y dispara la descarga en el navegador.
  */
-export function exportarCSV<T extends Record<string, unknown>>(
+export function exportarCSV<T extends object>(
   filas: readonly T[],
   nombreArchivo: string,
-  cabeceras?: { clave: keyof T; etiqueta: string }[]
+  cabeceras?: readonly { clave: keyof T; etiqueta: string }[]
 ): void {
   if (!filas.length) return;
   

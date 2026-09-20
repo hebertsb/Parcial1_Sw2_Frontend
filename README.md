@@ -54,3 +54,39 @@ Abre en `http://localhost:3000`. Ese puerto es fijo: es el único origen autoriz
   del navegador avisa si pasa.
 - En `.env.local` también van `VITE_GOOGLE_CLIENT_ID` (login con Google) y las de Cloudinary (subir portadas de películas y productos).
   `.env.local` no se sube a git: cada integrante tiene el suyo.
+
+## Reportes del admin (RF08/CU05)
+
+`src/views/admin/AdminReportes.tsx` consume los **11 endpoints** reales de
+`Backend` (los reportes solo cuentan ventas con `estado='pagada'`):
+
+| Reporte | GET (base `/api/reportes`) | Componente frontend |
+|---|---|---|
+| Resumen (ventas, monto, entradas) | `/ventas` | KPIs + `ReportesInsights` |
+| Comparación vs período anterior | `/dashboard` | KPIs (variación ↑/↓ %) |
+| Por película / función / producto | `/por-pelicula`, `/por-funcion`, `/por-producto` | `ReportesTabla*` (`TablaConExport`, con CSV) |
+| Método de pago / promoción | `/por-metodo-pago`, `/por-promocion` | `ReportesCardMetodoPago`, `ReportesCardPromocion` (barras %) |
+| Serie de tiempo | `/serie-temporal` | `ReportesChart` (modo `combinado`, eje dual) |
+| Paginados | `/{reporte}/paginado` | páginas Anterior/Siguiente + "Página X de Y" |
+
+- **Tipos/contratos**: `src/core/types/reporte.types.ts` (mismos nombres que el
+  DTO del backend) — si el backend cambia una firma, avisá según
+  `docs/contratos-servicios.md`.
+- **Lógica pura** (presets de fechas, share %, días en rango, insights, export CSV):
+  `src/core/reportes.utils.ts`.
+- **Filtros**: presets Hoy/Ayer/Esta semana/Este mes/Mes anterior, rango manual,
+  agrupación Día/Semana/Mes, `limit`/`offset`, debounce (300 ms),
+  persistencia en `localStorage`.
+- **Estado del plan de implementación**: ver `PLAN_REPORTES_IMPLEMENTACION.md`
+  (raíz). Días 1–3 hechos; Día 4 hecho salvo el ensayo de la demo.
+
+### Probar los reportes
+
+```bash
+npm run lint   # tsc --noEmit (debe quedar en 0 errores)
+npm test       # tests unitarios de reportes.utils (node:test + tsx, sin deps nuevas)
+npm run build
+```
+
+Los tests viven en `tests/reportes.utils.test.ts` (8 tests: presets de rango,
+`calcularShare`, `diasEnRango`, `formatearFechaLegible`, `generarInsights`).

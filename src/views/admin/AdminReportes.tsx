@@ -272,7 +272,7 @@ export const AdminReportes = () => {
       </div>
 
       {diasEnRango(filtro.desde, filtro.hasta) !== null && (
-        <div className="rounded-lg bg-surface-container px-space-md py-space-sm font-body-sm text-body-sm text-on-surface-variant">
+        <div className="entrada-suave rounded-lg bg-surface-container px-space-md py-space-sm font-body-sm text-body-sm text-on-surface-variant">
           Mostrando {filtro.desde} → {filtro.hasta} ({diasEnRango(filtro.desde, filtro.hasta)} días){' '}
           {serieTemporal.length > 0 && (
             <>• {serieTemporal.length} {filtro.agrupacion === 'mes' ? 'meses/mes' : filtro.agrupacion === 'semana' ? 'semanas/semana' : 'días'} con actividad</>
@@ -296,7 +296,7 @@ export const AdminReportes = () => {
       )}
 
       {!cargando && dashboard && resumen && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md">
+        <div className="entrada-suave grid grid-cols-1 md:grid-cols-4 gap-space-md">
           {renderKPI(
             'Ventas totales',
             String(resumen.totalVentas),
@@ -347,19 +347,23 @@ export const AdminReportes = () => {
         </div>
       )}
 
-      <ReportesInsights
-        insumos={{ resumen, dashboard, porPelicula, serieTemporal, porMetodoPago, porPromocion }}
-      />
+      <div className="entrada-suave">
+        <ReportesInsights
+          insumos={{ resumen, dashboard, porPelicula, serieTemporal, porMetodoPago, porPromocion }}
+        />
+      </div>
 
       {serieTemporal.length > 0 && (
-        <ReportesChart
-          data={serieTemporal}
-          tipo="combinado"
-          titulo="Evolución de Ventas: Monto (Bs) + Entradas"
-        />
+        <div className="entrada-suave">
+          <ReportesChart
+            data={serieTemporal}
+            tipo="combinado"
+            titulo="Evolución de Ventas: Monto (Bs) + Entradas"
+          />
+        </div>
       )}
 
-      <div className="flex flex-col gap-space-md">
+      <div className="entrada-suave flex flex-col gap-space-md">
         <div className="flex items-center justify-between">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por película</h2>
           {paginacion.pelicula && (
@@ -367,6 +371,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('pelicula', 'prev')}
                 disabled={paginacion.pelicula.offset === 0}
+                aria-label="Ir a la página anterior de ventas por película"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Anterior
@@ -377,6 +382,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('pelicula', 'next')}
                 disabled={!paginacion.pelicula.hasMore}
+                aria-label="Ir a la página siguiente de ventas por película"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Siguiente
@@ -393,6 +399,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('funcion', 'prev')}
                 disabled={paginacion.funcion.offset === 0}
+                aria-label="Ir a la página anterior de ventas por función"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Anterior
@@ -403,6 +410,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('funcion', 'next')}
                 disabled={!paginacion.funcion.hasMore}
+                aria-label="Ir a la página siguiente de ventas por función"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Siguiente
@@ -419,6 +427,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('producto', 'prev')}
                 disabled={paginacion.producto.offset === 0}
+                aria-label="Ir a la página anterior de ventas de productos"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Anterior
@@ -429,6 +438,7 @@ export const AdminReportes = () => {
               <button
                 onClick={() => handlePageChange('producto', 'next')}
                 disabled={!paginacion.producto.hasMore}
+                aria-label="Ir a la página siguiente de ventas de productos"
                 className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
               >
                 Siguiente

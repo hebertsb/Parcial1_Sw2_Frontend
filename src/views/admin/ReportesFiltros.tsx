@@ -82,6 +82,7 @@ export const ReportesFiltros = ({ draft, onDraftChange, onAplicar, onRestablecer
                 key={agrupacion.id}
                 type="button"
                 onClick={() => onDraftChange({ ...draft, agrupacion: agrupacion.id, offset: 0 })}
+                aria-pressed={(draft.agrupacion ?? 'dia') === agrupacion.id}
                 className={`h-10 px-space-md font-label-md text-label-md outline-none transition-colors ${
                   (draft.agrupacion ?? 'dia') === agrupacion.id
                     ? 'bg-primary text-on-primary'

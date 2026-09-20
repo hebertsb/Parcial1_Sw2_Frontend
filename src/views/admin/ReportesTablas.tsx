@@ -5,7 +5,13 @@ const THEAD = 'py-space-sm px-space-md text-left font-label-code text-label-code
 const TD = 'py-space-sm px-space-md font-body-sm text-body-sm text-on-surface';
 
 /** Wrapper responsive para tablas con botón de exportar */
-export function TablaConExport<T extends Record<string, unknown>>({
+type CabeceraTabla<T extends object> = {
+  clave: keyof T;
+  etiqueta: string;
+  formato?: (valor: T[keyof T]) => string;
+};
+
+export function TablaConExport<T extends object>({
   titulo,
   filas,
   cabeceras,
@@ -14,7 +20,7 @@ export function TablaConExport<T extends Record<string, unknown>>({
 }: {
   titulo: string;
   filas: readonly T[];
-  cabeceras: { clave: keyof T; etiqueta: string }[];
+  cabeceras: readonly CabeceraTabla<T>[];
   exportNombre: string;
   vacioMensaje: string;
 }) {
@@ -46,7 +52,7 @@ export function TablaConExport<T extends Record<string, unknown>>({
           <thead>
             <tr>
               {cabeceras.map((c, i) => (
-                <th key={i} className={THEAD}>{c.etiqueta}</th>
+                <th key={i} scope="col" className={THEAD}>{c.etiqueta}</th>
               ))}
             </tr>
           </thead>
