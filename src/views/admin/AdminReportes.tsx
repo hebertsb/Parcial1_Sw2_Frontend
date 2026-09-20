@@ -192,6 +192,20 @@ export const AdminReportes = () => {
     }
   }, [filtro.desde, filtro.hasta]);
 
+  const aplicarFiltro = () => {
+    setFiltro((f) => ({ ...f, ...filtroDraftDebounced, offset: 0 }));
+  };
+
+  const restablecerFiltro = () => {
+    const defaults: RangoFechas = {
+      agrupacion: 'dia',
+      limit: 50,
+      offset: 0,
+    };
+    setFiltroDraft(defaults);
+    setFiltro(defaults);
+  };
+
   const renderKPI = (
     label: string,
     valor: string,
