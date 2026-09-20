@@ -59,6 +59,19 @@ export interface ReportePorPromocion {
   montoDescuento: string;
 }
 
+export interface DashboardMetrica {
+  actual: number;
+  anterior: number;
+  /** `null` cuando el periodo anterior es 0 (no hay base para calcular %). */
+  variacionPorcentual: string | null;
+}
+
+export interface DashboardResponse {
+  montoTotal: DashboardMetrica;
+  totalVentas: DashboardMetrica;
+  cantidadEntradas: DashboardMetrica;
+}
+
 export interface SerieTemporalPunto {
   fecha: string;
   montoTotal: string;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../controllers/AuthContext';
+import { diasEnRango, formatearFechaLegible } from '../../core/reportes.utils';
 import {
   obtenerResumenVentas,
   obtenerReportePorPelicula,
@@ -26,13 +27,21 @@ import type {
   SerieTemporalPunto,
   PaginatedResponse,
 } from '../../core/types/reporte.types';
-import { ReportesTablaPelicula, ReportesTablaFuncion, ReportesTablaProducto, ReportesTablaMetodoPago, ReportesTablaPromocion } from './ReportesTablas';
+import { ReportesTablaPelicula, ReportesTablaFuncion, ReportesTablaProducto } from './ReportesTablas';
+import { ReportesCardMetodoPago, ReportesCardPromocion } from './ReportesCards';
+import { ReportesFiltros } from './ReportesFiltros';
+import { ReportesInsights } from './ReportesInsights';
 import { ReportesChart } from './ReportesChart';
 
 /** CU05/RF08 — reportes reales (`GET /reportes/*`), reemplaza la telemetría hardcodeada. */
 export const AdminReportes = () => {
   const { token } = useAuth();
   const [filtro, setFiltro] = useState<RangoFechas>({
+    agrupacion: 'dia',
+    limit: 50,
+    offset: 0,
+  });
+  const [filtroDraft, setFiltroDraft] = useState<RangoFechas>({
     agrupacion: 'dia',
     limit: 50,
     offset: 0,
@@ -120,6 +129,35 @@ export const AdminReportes = () => {
     };
   }, [token, filtro]);
 
+  const aplicarFiltro = () => {
+    let { desde, hasta } = filtroDraft;
+    // Validación #5: si `hasta < desde`, invertir en vez de devolver un error silencioso.
+    if (desde && hasta && hasta < desde) {
+      const aux = desde;
+      desde = hasta;
+      hasta = aux;
+    }
+    setFiltro({ ...filtroDraft, desde, hasta, offset: 0 });
+  };
+
+  const restablecerFiltro = () => {
+    const base: RangoFechas = { agrupacion: 'dia', limit: 50, offset: 0 };
+    setFiltroDraft(base);
+    setFiltro(base);
+  };
+
+  // Reset offset cuando cambian los filtros principales (no paginación)
+  useEffect(() => {
+    setFiltro((f) => ({ ...f, offset: 0 }));
+  }, [filtro.desde, filtro.hasta, filtro.agrupacion]);
+
+  // Validación: si hasta < desde, intercambiar
+  useEffect(() => {
+    if (filtro.desde && filtro.hasta && filtro.hasta < filtro.desde) {
+      setFiltro((f) => ({ ...f, hasta: f.desde, desde: f.hasta }));
+    }
+  }, [filtro.desde, filtro.hasta]);
+
   const renderKPI = (
     label: string,
     valor: string,
@@ -164,41 +202,23 @@ export const AdminReportes = () => {
           <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">CU05 • Datos reales</span>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Reportes de Ventas</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-space-sm">
-          <input
-            type="date"
-            value={filtro.desde ?? ''}
-            onChange={(e) => setFiltro((f) => ({ ...f, desde: e.target.value || undefined }))}
-            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
-          />
-          <span className="text-on-surface-variant">—</span>
-          <input
-            type="date"
-            value={filtro.hasta ?? ''}
-            onChange={(e) => setFiltro((f) => ({ ...f, hasta: e.target.value || undefined }))}
-            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
-          />
-          <select
-            value={filtro.agrupacion ?? 'dia'}
-            onChange={(e) => setFiltro((f) => ({ ...f, agrupacion: e.target.value as 'dia' | 'semana' | 'mes' }))}
-            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
-          >
-            <option value="dia">Por día</option>
-            <option value="semana">Por semana</option>
-            <option value="mes">Por mes</option>
-          </select>
-          <select
-            value={String(filtro.limit ?? 50)}
-            onChange={(e) => setFiltro((f) => ({ ...f, limit: Number(e.target.value), offset: 0 }))}
-            className="h-10 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner"
-          >
-            <option value="10">10 por página</option>
-            <option value="25">25 por página</option>
-            <option value="50">50 por página</option>
-            <option value="100">100 por página</option>
-          </select>
-        </div>
+        <ReportesFiltros
+          draft={filtroDraft}
+          onDraftChange={setFiltroDraft}
+          onAplicar={aplicarFiltro}
+          onRestablecer={restablecerFiltro}
+        />
       </div>
+
+      {diasEnRango(filtro.desde, filtro.hasta) !== null && (
+        <div className="rounded-lg bg-surface-container px-space-md py-space-sm font-body-sm text-body-sm text-on-surface-variant">
+          Mostrando {filtro.desde} → {filtro.hasta} ({diasEnRango(filtro.desde, filtro.hasta)} días){' '}
+          {serieTemporal.length > 0 && (
+            <>• {serieTemporal.length} {filtro.agrupacion === 'mes' ? 'meses/mes' : filtro.agrupacion === 'semana' ? 'semanas/semana' : 'días'} con actividad</>
+          )}{' '}
+          • Período comparado: {diasEnRango(filtro.desde, filtro.hasta) ?? 7} días previos
+        </div>
+      )}
 
       {cargando && <p className="font-label-md text-label-md text-on-surface-variant">Cargando reportes...</p>}
 
@@ -243,6 +263,10 @@ export const AdminReportes = () => {
           </div>
         </div>
       )}
+
+      <ReportesInsights
+        insumos={{ resumen, dashboard, porPelicula, serieTemporal, porMetodoPago, porPromocion }}
+      />
 
       {serieTemporal.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
@@ -340,15 +364,10 @@ export const AdminReportes = () => {
         </div>
         <ReportesTablaProducto filas={porProducto} />
 
-        <div className="flex items-center justify-between">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por método de pago</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
+          <ReportesCardMetodoPago filas={porMetodoPago} />
+          <ReportesCardPromocion filas={porPromocion} />
         </div>
-        <ReportesTablaMetodoPago filas={porMetodoPago} />
-
-        <div className="flex items-center justify-between">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por promoción</h2>
-        </div>
-        <ReportesTablaPromocion filas={porPromocion} />
       </div>
     </div>
   );
