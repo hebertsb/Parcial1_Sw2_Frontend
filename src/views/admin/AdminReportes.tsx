@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../controllers/AuthContext';
 import { useToast } from '../../hooks/useToast';
-import { diasEnRango, formatearFechaLegible } from '../../core/reportes.utils';
+import { useDebounce, useLocalStorage } from '../../hooks/useDebounce';
+import { diasEnRango, formatearFechaLegible, exportarCSV } from '../../core/reportes.utils';
 import {
   obtenerResumenVentas,
   obtenerReportePorPelicula,
@@ -39,11 +40,50 @@ import { KPISkeleton, TablaSkeleton, ChartSkeleton, KPIsGridSkeleton } from './R
 export const AdminReportes = () => {
   const { token } = useAuth();
   const { showToast } = useToast();
-  const [filtro, setFiltro] = useState<RangoFechas>({
+  
+  // Claves para localStorage
+  const STORAGE_KEY_FILTRO = 'admin-reportes-filtro';
+  const STORAGE_KEY_PAGINACION = 'admin-reportes-paginacion';
+  
+  // Cargar filtro inicial desde localStorage
+  const [filtroGuardado] = useLocalStorage<RangoFechas>(STORAGE_KEY_FILTRO, {
     agrupacion: 'dia',
     limit: 50,
     offset: 0,
   });
+  
+  // Estado de paginación con persistencia
+  const [paginacionGuardada] = useLocalStorage<{
+    pelicula: { limit: number; offset: number };
+    funcion: { limit: number; offset: number };
+    producto: { limit: number; offset: number };
+  }>(STORAGE_KEY_PAGINACION, {
+    pelicula: { limit: 50, offset: 0 },
+    funcion: { limit: 50, offset: 0 },
+    producto: { limit: 50, offset: 0 },
+  });
+  
+  // Debounce para filtroDraft (evita requests en cada keystroke)
+  const filtroDraftDebounced = useDebounce(filtroDraft, 300);
+  
+  // Persistir filtro en localStorage cuando cambia
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_FILTRO, JSON.stringify(filtro));
+  }, [filtro]);
+  
+  // Persistir paginación en localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_PAGINACION, JSON.stringify(paginacionGuardada));
+  }, [paginacionGuardada]);
+  
+  // Sincronizar paginación con estado guardado
+  useEffect(() => {
+    if (paginacionGuardada.pelicula) {
+      setFiltro(f => ({ ...f, limit: paginacionGuardada.pelicula.limit, offset: paginacionGuardada.pelicula.offset }));
+    }
+  }, [paginacionGuardada]);
+  
+  const [filtro, setFiltro] = useState<RangoFechas>(filtroGuardado);
   const [filtroDraft, setFiltroDraft] = useState<RangoFechas>({
     agrupacion: 'dia',
     limit: 50,
@@ -133,22 +173,12 @@ export const AdminReportes = () => {
     };
   }, [token, filtro]);
 
-  const aplicarFiltro = () => {
-    let { desde, hasta } = filtroDraft;
-    // Validación #5: si `hasta < desde`, invertir en vez de devolver un error silencioso.
-    if (desde && hasta && hasta < desde) {
-      const aux = desde;
-      desde = hasta;
-      hasta = aux;
+  // Aplicar filtro draft usando debounced value para evitar requests en cada keystroke
+  useEffect(() => {
+    if (filtroDraftDebounced) {
+      setFiltro(filtroDraftDebounced);
     }
-    setFiltro({ ...filtroDraft, desde, hasta, offset: 0 });
-  };
-
-  const restablecerFiltro = () => {
-    const base: RangoFechas = { agrupacion: 'dia', limit: 50, offset: 0 };
-    setFiltroDraft(base);
-    setFiltro(base);
-  };
+  }, [filtroDraftDebounced]);
 
   // Reset offset cuando cambian los filtros principales (no paginación)
   useEffect(() => {
@@ -167,28 +197,41 @@ export const AdminReportes = () => {
     valor: string,
     variacion?: DashboardMetrica,
     color: 'primary' | 'tertiary' | 'secondary' | 'quaternary' = 'primary',
-  ) => (
-    <div className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-2xs">
-      <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
-      <div className="flex items-end gap-space-xs">
-        <span className={`font-display-hero text-[36px] leading-tight text-${color}`}>{valor}</span>
-        {variacion && variacion.variacionPorcentual !== null && (
-          <span
-            className={`font-label-md text-label-md ${
-              variacion.variacionPorcentual.startsWith('-') ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            {variacion.variacionPorcentual.startsWith('-') ? '▼' : '▲'} {variacion.variacionPorcentual}%
+  ) => {
+    // Tooltip text para el KPI
+    const tooltipText = variacion
+      ? variacion.variacionPorcentual !== null
+        ? `${variacion.variacionPorcentual.startsWith('-') ? '▼' : '▲'} ${variacion.variacionPorcentual}% vs período anterior (${variacion.anterior.toLocaleString()})`
+        : `vs período anterior: ${variacion.anterior.toLocaleString()}`
+      : 'Sin datos de comparación';
+
+    return (
+      <div className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-2xs relative group">
+        <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
+        <div className="flex items-end gap-space-xs">
+          <span className={`font-display-hero text-[36px] leading-tight text-${color}`}>{valor}</span>
+          {variacion && variacion.variacionPorcentual !== null && (
+            <span
+              className={`font-label-md text-label-md ${
+                variacion.variacionPorcentual.startsWith('-') ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {variacion.variacionPorcentual.startsWith('-') ? '▼' : '▲'} {variacion.variacionPorcentual}%
+            </span>
+          )}
+        </div>
+        {/* Tooltip simple CSS-only */}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-surface-container-high text-on-surface rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+          {tooltipText}
+        </div>
+        {variacion && (
+          <span className="font-body-xs text-body-xs text-on-surface-variant">
+            vs período anterior: {variacion.anterior.toLocaleString()}
           </span>
         )}
       </div>
-      {variacion && (
-        <span className="font-body-xs text-body-xs text-on-surface-variant">
-          vs periodo anterior: {variacion.anterior.toLocaleString()}
-        </span>
-      )}
-    </div>
-  );
+    )
+  };
 
   const handlePageChange = (tipo: 'pelicula' | 'funcion' | 'producto', direction: 'prev' | 'next') => {
     const current = paginacion[tipo];

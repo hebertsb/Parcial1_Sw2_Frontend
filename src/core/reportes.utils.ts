@@ -98,6 +98,47 @@ export function capitalizar(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+/**
+ * Exporta un array de objetos a CSV y dispara la descarga en el navegador.
+ */
+export function exportarCSV<T extends Record<string, unknown>>(
+  filas: readonly T[],
+  nombreArchivo: string,
+  cabeceras?: { clave: keyof T; etiqueta: string }[]
+): void {
+  if (!filas.length) return;
+  
+  // Usar cabeceras personalizadas o inferir de la primera fila
+  const cols = cabeceras ?? (Object.keys(filas[0]) as (keyof T)[]).map(k => ({ clave: k, etiqueta: String(k) }));
+  
+  // Cabecera CSV
+  const encabezado = cols.map(c => c.etiqueta).join(',');
+  
+  // Filas
+  const filasCSV = filas.map(fila => 
+    cols.map(c => {
+      const valor = fila[c.clave];
+      // Escapar comillas y envolver en comillas si tiene comas, saltos de línea o comillas
+      const str = valor == null ? '' : String(valor);
+      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }).join(',')
+  );
+  
+  const csv = [encabezado, ...filasCSV].join('\n');
+  
+  // Descargar
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${nombreArchivo}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 const toNumber = (valor: string): number => Number(valor) || 0;
 
 /** `Number()` seguro para montos en string: `null`/`NaN`/`undefined` → 0. */
