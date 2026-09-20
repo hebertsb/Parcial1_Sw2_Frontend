@@ -417,11 +417,9 @@ export const AdminReportes = () => {
       </div>
 
       {/* Tablas principales (V7 del mockup): película 7/12 + dulcería 5/12.
-          `lg:` (1024px) y no `xl:` (1280px) — con el sidebar fijo de 260px del
-          mockup, `xl:` casi nunca se activaba en laptops normales y las dos
-          tablas se veían apiladas en vertical en vez de lado a lado. */}
-      <div className="entrada-suave grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
-        <div className="lg:col-span-7 flex flex-col gap-space-sm">
+          `md:` (768px) — horizontal en tablet y desktop. */}
+      <div className="entrada-suave grid grid-cols-1 md:grid-cols-12 gap-space-md items-start">
+        <div className="md:col-span-7 flex flex-col gap-space-sm">
           {paginacion.pelicula && (
             <div className="flex items-center justify-end gap-space-sm">
               <button
@@ -451,7 +449,7 @@ export const AdminReportes = () => {
             onDetalle={toggleDetallePelicula}
           />
         </div>
-        <div className="lg:col-span-5 flex flex-col gap-space-sm">
+        <div className="md:col-span-5 flex flex-col gap-space-sm">
           {paginacion.producto && (
             <div className="flex items-center justify-end gap-space-sm">
               <button
