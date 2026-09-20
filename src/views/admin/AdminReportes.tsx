@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ShoppingCart, Banknote, Ticket, Popcorn, Info } from 'lucide-react';
 import { useAuth } from '../../controllers/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { useDebounce, useLocalStorage } from '../../hooks/useDebounce';
-import { diasEnRango, formatearFechaLegible, exportarCSV } from '../../core/reportes.utils';
+import { diasEnRango } from '../../core/reportes.utils';
 import {
   obtenerResumenVentas,
   obtenerReportePorPelicula,
@@ -107,6 +108,16 @@ export const AdminReportes = () => {
     producto: null,
   });
   const [cargando, setCargando] = useState(false);
+  // Filtro cliente para "Detalle" en la tabla de película: no hay ruta de
+  // detalle de película, así que reutilizamos `porFuncion` (mismos títulos).
+  const [peliculaSeleccionada, setPeliculaSeleccionada] = useState<string | null>(null);
+  const toggleDetallePelicula = (titulo: string) => {
+    setPeliculaSeleccionada((actual) => (actual === titulo ? null : titulo));
+  };
+  const funcionesFiltradas = useMemo(
+    () => (peliculaSeleccionada ? porFuncion.filter((f) => f.titulo === peliculaSeleccionada) : porFuncion),
+    [porFuncion, peliculaSeleccionada],
+  );
 
   const cargarReportes = async () => {
     if (!token) return;
@@ -206,45 +217,62 @@ export const AdminReportes = () => {
     setFiltro(defaults);
   };
 
+  type ColorKPI = 'primary' | 'tertiary' | 'secondary' | 'quaternary';
+  const ICONOS_KPI: Record<ColorKPI, typeof ShoppingCart> = {
+    primary: ShoppingCart,
+    tertiary: Banknote,
+    secondary: Ticket,
+    quaternary: Popcorn,
+  };
+  // Clases completas y literales (no interpoladas) para que Tailwind las detecte en build.
+  const TILE_KPI: Record<ColorKPI, string> = {
+    primary: 'bg-primary/15 text-primary',
+    tertiary: 'bg-tertiary/15 text-tertiary',
+    secondary: 'bg-secondary/15 text-secondary',
+    quaternary: 'bg-quaternary/15 text-quaternary',
+  };
+
   const renderKPI = (
     label: string,
     valor: string,
+    footer: string,
     variacion?: DashboardMetrica,
-    color: 'primary' | 'tertiary' | 'secondary' | 'quaternary' = 'primary',
+    color: ColorKPI = 'primary',
   ) => {
-    // Tooltip text para el KPI
     const tooltipText = variacion
       ? variacion.variacionPorcentual !== null
         ? `${variacion.variacionPorcentual.startsWith('-') ? '▼' : '▲'} ${variacion.variacionPorcentual}% vs período anterior (${variacion.anterior.toLocaleString()})`
         : `vs período anterior: ${variacion.anterior.toLocaleString()}`
       : 'Sin datos de comparación';
+    const Icono = ICONOS_KPI[color];
+    const subio = variacion?.variacionPorcentual != null && !variacion.variacionPorcentual.startsWith('-');
 
     return (
-      <div className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-2xs relative group">
-        <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
-        <div className="flex items-end gap-space-xs">
-          <span className={`font-display-hero text-[36px] leading-tight text-${color}`}>{valor}</span>
+      <div className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-sm relative group">
+        <div className="flex items-start justify-between">
+          <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${TILE_KPI[color]}`}>
+            <Icono className="w-5 h-5" />
+          </span>
           {variacion && variacion.variacionPorcentual !== null && (
             <span
-              className={`font-label-md text-label-md ${
-                variacion.variacionPorcentual.startsWith('-') ? 'text-green-600' : 'text-red-600'
+              className={`px-space-xs py-0.5 rounded-full font-label-md text-label-md flex items-center gap-space-2xs ${
+                subio ? 'bg-tertiary/15 text-tertiary' : 'bg-error/15 text-error'
               }`}
             >
-              {variacion.variacionPorcentual.startsWith('-') ? '▼' : '▲'} {variacion.variacionPorcentual}%
+              {subio ? '↑' : '↓'} {variacion.variacionPorcentual.replace('-', '')}%
             </span>
           )}
         </div>
-        {/* Tooltip simple CSS-only */}
+        <div className="flex flex-col gap-space-2xs">
+          <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
+          <span className={`font-display-hero text-[32px] leading-tight text-on-surface`}>{valor}</span>
+          <span className="font-body-xs text-body-xs text-on-surface-variant">{footer}</span>
+        </div>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-surface-container-high text-on-surface rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
           {tooltipText}
         </div>
-        {variacion && (
-          <span className="font-body-xs text-body-xs text-on-surface-variant">
-            vs período anterior: {variacion.anterior.toLocaleString()}
-          </span>
-        )}
       </div>
-    )
+    );
   };
 
   const handlePageChange = (tipo: 'pelicula' | 'funcion' | 'producto', direction: 'prev' | 'next') => {
@@ -262,6 +290,9 @@ export const AdminReportes = () => {
         <div className="flex flex-col gap-space-2xs">
           <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">CU05 • Datos reales</span>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Reportes de Ventas</h1>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">
+            Análisis del rendimiento comercial del cine y toma de decisiones
+          </p>
         </div>
         <ReportesFiltros
           draft={filtroDraft}
@@ -281,6 +312,21 @@ export const AdminReportes = () => {
         </div>
       )}
 
+      {/* V3 del mockup: conciliación — solo `estado='pagada'` entra en estos reportes. */}
+      <div className="entrada-suave rounded-lg bg-secondary/10 border border-secondary/20 px-space-md py-space-sm flex flex-wrap items-center justify-between gap-space-sm">
+        <div className="flex items-start gap-space-xs">
+          <Info className="w-4 h-4 text-secondary mt-0.5 flex-shrink-0" />
+          <p className="font-body-sm text-body-sm text-on-surface">
+            <span className="font-label-md text-label-md text-secondary">Información de conciliación:</span>{' '}
+            Las ventas pendientes o canceladas no se computan en la recaudación real. Todos los montos corresponden
+            a operaciones pagadas y liquidadas.
+          </p>
+        </div>
+        <span className="px-space-xs py-0.5 rounded bg-secondary/15 text-secondary font-label-code text-label-code uppercase tracking-wider whitespace-nowrap">
+          CU05-RF08 compliant
+        </span>
+      </div>
+
       {/* Skeleton loading state */}
       {cargando && (
         <>
@@ -296,33 +342,33 @@ export const AdminReportes = () => {
       )}
 
       {!cargando && dashboard && resumen && (
-        <div className="entrada-suave grid grid-cols-1 md:grid-cols-4 gap-space-md">
+        <div className="entrada-suave grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md">
           {renderKPI(
-            'Ventas totales',
+            'Ventas pagadas',
             String(resumen.totalVentas),
+            `${resumen.totalVentas} transacción${resumen.totalVentas === 1 ? '' : 'es'} liquidada${resumen.totalVentas === 1 ? '' : 's'}`,
             dashboard.totalVentas,
             'primary',
           )}
           {renderKPI(
             'Monto recaudado',
             `${resumen.montoTotal} Bs`,
+            'Ingreso neto cobrado en caja/online',
             dashboard.montoTotal,
             'tertiary',
           )}
           {renderKPI(
             'Entradas vendidas',
             String(resumen.cantidadEntradas),
+            'Ocupación de butacas registradas',
             dashboard.cantidadEntradas,
             'secondary',
           )}
           {renderKPI(
             'Productos vendidos',
             String(porProducto.reduce((acc, p) => acc + p.cantidadVendida, 0)),
-            {
-              actual: porProducto.reduce((acc, p) => acc + p.cantidadVendida, 0),
-              anterior: 0,
-              variacionPorcentual: null,
-            },
+            'Unidades totales de confitería',
+            undefined,
             'quaternary',
           )}
         </div>
@@ -353,21 +399,28 @@ export const AdminReportes = () => {
         />
       </div>
 
-      {serieTemporal.length > 0 && (
-        <div className="entrada-suave">
+      {/* Fila de 3 módulos (V6 del mockup): evolución + métodos de pago + promociones. */}
+      <div className="entrada-suave grid grid-cols-1 xl:grid-cols-3 gap-space-md items-stretch">
+        {serieTemporal.length > 0 ? (
           <ReportesChart
             data={serieTemporal}
             tipo="combinado"
-            titulo="Evolución de Ventas: Monto (Bs) + Entradas"
+            titulo="Evolución de ventas"
           />
-        </div>
-      )}
+        ) : (
+          <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-xl text-center text-on-surface-variant">
+            Sin datos para el rango seleccionado.
+          </div>
+        )}
+        <ReportesCardMetodoPago filas={porMetodoPago} />
+        <ReportesCardPromocion filas={porPromocion} />
+      </div>
 
-      <div className="entrada-suave flex flex-col gap-space-md">
-        <div className="flex items-center justify-between">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por película</h2>
+      {/* Tablas principales (V7 del mockup): película 7/12 + dulcería 5/12. */}
+      <div className="entrada-suave grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start">
+        <div className="xl:col-span-7 flex flex-col gap-space-sm">
           {paginacion.pelicula && (
-            <div className="flex items-center gap-space-sm">
+            <div className="flex items-center justify-end gap-space-sm">
               <button
                 onClick={() => handlePageChange('pelicula', 'prev')}
                 disabled={paginacion.pelicula.offset === 0}
@@ -389,11 +442,55 @@ export const AdminReportes = () => {
               </button>
             </div>
           )}
+          <ReportesTablaPelicula
+            filas={porPelicula}
+            peliculaSeleccionada={peliculaSeleccionada}
+            onDetalle={toggleDetallePelicula}
+          />
         </div>
-        <ReportesTablaPelicula filas={porPelicula} />
+        <div className="xl:col-span-5 flex flex-col gap-space-sm">
+          {paginacion.producto && (
+            <div className="flex items-center justify-end gap-space-sm">
+              <button
+                onClick={() => handlePageChange('producto', 'prev')}
+                disabled={paginacion.producto.offset === 0}
+                aria-label="Ir a la página anterior de ventas de productos"
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">
+                Página {Math.floor(paginacion.producto.offset / paginacion.producto.limit) + 1} de {Math.ceil(paginacion.producto.total / paginacion.producto.limit)}
+              </span>
+              <button
+                onClick={() => handlePageChange('producto', 'next')}
+                disabled={!paginacion.producto.hasMore}
+                aria-label="Ir a la página siguiente de ventas de productos"
+                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+          <ReportesTablaProducto filas={porProducto} />
+        </div>
+      </div>
 
-        <div className="flex items-center justify-between">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por función</h2>
+      {/* Sin equivalente directo en el mockup: se deja como detalle adicional,
+          filtrable desde "Detalle" en la tabla de película de arriba. */}
+      <div className="entrada-suave flex flex-col gap-space-sm">
+        <div className="flex items-center justify-between flex-wrap gap-space-sm">
+          <div className="flex items-center gap-space-sm">
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por función</h2>
+            {peliculaSeleccionada && (
+              <span className="flex items-center gap-space-xs px-space-sm py-0.5 rounded-full bg-primary/10 text-primary font-label-md text-label-md">
+                {peliculaSeleccionada}
+                <button type="button" onClick={() => setPeliculaSeleccionada(null)} aria-label="Quitar filtro de película" className="hover:opacity-70">
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
           {paginacion.funcion && (
             <div className="flex items-center gap-space-sm">
               <button
@@ -418,40 +515,7 @@ export const AdminReportes = () => {
             </div>
           )}
         </div>
-        <ReportesTablaFuncion filas={porFuncion} />
-
-        <div className="flex items-center justify-between">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por producto (dulcería)</h2>
-          {paginacion.producto && (
-            <div className="flex items-center gap-space-sm">
-              <button
-                onClick={() => handlePageChange('producto', 'prev')}
-                disabled={paginacion.producto.offset === 0}
-                aria-label="Ir a la página anterior de ventas de productos"
-                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
-              >
-                Anterior
-              </button>
-              <span className="font-body-sm text-body-sm text-on-surface-variant">
-                Página {Math.floor(paginacion.producto.offset / paginacion.producto.limit) + 1} de {Math.ceil(paginacion.producto.total / paginacion.producto.limit)}
-              </span>
-              <button
-                onClick={() => handlePageChange('producto', 'next')}
-                disabled={!paginacion.producto.hasMore}
-                aria-label="Ir a la página siguiente de ventas de productos"
-                className="h-8 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner disabled:opacity-50"
-              >
-                Siguiente
-              </button>
-            </div>
-          )}
-        </div>
-        <ReportesTablaProducto filas={porProducto} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
-          <ReportesCardMetodoPago filas={porMetodoPago} />
-          <ReportesCardPromocion filas={porPromocion} />
-        </div>
+        <ReportesTablaFuncion filas={funcionesFiltradas} />
       </div>
     </div>
   );

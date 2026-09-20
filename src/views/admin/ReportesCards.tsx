@@ -45,10 +45,13 @@ export const ReportesCardMetodoPago = ({ filas }: { filas: ReportePorMetodoPago[
   const montoTotal = filas.reduce((acc, fila) => acc + toIntOrZero(fila.montoTotal), 0);
 
   return (
-    <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg flex flex-col gap-space-md">
-      <div className="flex items-baseline justify-between gap-space-sm">
-        <h3 className="font-headline-sm text-headline-sm text-on-surface">Métodos de pago</h3>
-        <span className="font-label-code text-label-code text-on-surface-variant">
+    <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg flex flex-col gap-space-md h-full">
+      <div className="flex items-start justify-between gap-space-sm">
+        <div className="flex flex-col gap-space-2xs">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface">Métodos de pago</h3>
+          <p className="font-body-xs text-body-xs text-on-surface-variant">Volumen y recaudación por canal de liquidación</p>
+        </div>
+        <span className="font-label-code text-label-code text-on-surface-variant whitespace-nowrap">
           {montoTotal.toLocaleString()} Bs
         </span>
       </div>
@@ -74,12 +77,16 @@ export const ReportesCardPromocion = ({ filas }: { filas: ReportePorPromocion[] 
   }
   const conShare = calcularShare(filas, (fila) => fila.totalVentas);
   const totalVentas = filas.reduce((acc, fila) => acc + fila.totalVentas, 0);
+  const totalDescuento = filas.reduce((acc, fila) => acc + (Number(fila.montoDescuento) || 0), 0);
 
   return (
-    <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg flex flex-col gap-space-md">
-      <div className="flex items-baseline justify-between gap-space-sm">
-        <h3 className="font-headline-sm text-headline-sm text-on-surface">Promociones</h3>
-        <span className="font-label-code text-label-code text-on-surface-variant">
+    <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg flex flex-col gap-space-md h-full">
+      <div className="flex items-start justify-between gap-space-sm">
+        <div className="flex flex-col gap-space-2xs">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface">Promociones utilizadas</h3>
+          <p className="font-body-xs text-body-xs text-on-surface-variant">Impacto en volumen, descuentos y recaudación asociada</p>
+        </div>
+        <span className="font-label-code text-label-code text-on-surface-variant whitespace-nowrap">
           {totalVentas} venta{totalVentas === 1 ? '' : 's'}
         </span>
       </div>
@@ -94,6 +101,10 @@ export const ReportesCardPromocion = ({ filas }: { filas: ReportePorPromocion[] 
           />
         ))}
       </ul>
+      <div className="flex items-center justify-between pt-space-sm border-t border-surface-container font-label-md text-label-md text-on-surface">
+        <span>Total descuento otorgado</span>
+        <span className="text-error">-{totalDescuento.toLocaleString()} Bs</span>
+      </div>
     </div>
   );
 };

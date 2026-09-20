@@ -101,25 +101,32 @@ export function capitalizar(texto: string): string {
 /**
  * Exporta un array de objetos a CSV y dispara la descarga en el navegador.
  */
+export interface CabeceraExport<T> {
+  clave: keyof T;
+  etiqueta: string;
+  formato?: (valor: T[keyof T]) => string;
+}
+
 export function exportarCSV<T extends object>(
   filas: readonly T[],
   nombreArchivo: string,
-  cabeceras?: readonly { clave: keyof T; etiqueta: string }[]
+  cabeceras?: readonly CabeceraExport<T>[]
 ): void {
   if (!filas.length) return;
-  
+
   // Usar cabeceras personalizadas o inferir de la primera fila
   const cols = cabeceras ?? (Object.keys(filas[0]) as (keyof T)[]).map(k => ({ clave: k, etiqueta: String(k) }));
-  
+
   // Cabecera CSV
   const encabezado = cols.map(c => c.etiqueta).join(',');
-  
+
   // Filas
-  const filasCSV = filas.map(fila => 
+  const filasCSV = filas.map(fila =>
     cols.map(c => {
       const valor = fila[c.clave];
+      const formato = 'formato' in c ? c.formato : undefined;
+      const str = valor == null ? '' : formato ? formato(valor) : String(valor);
       // Escapar comillas y envolver en comillas si tiene comas, saltos de línea o comillas
-      const str = valor == null ? '' : String(valor);
       if (str.includes(',') || str.includes('\n') || str.includes('"')) {
         return `"${str.replace(/"/g, '""')}"`;
       }

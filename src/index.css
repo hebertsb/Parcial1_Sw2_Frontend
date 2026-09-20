@@ -48,6 +48,10 @@
   --color-surface: #111319;
   --color-outline-variant: #534434;
   --color-on-primary: #472a00;
+  /* Cuarto acento para KPIs/insights de dulcería (Reportes) — el mockup usa
+     violeta para "productos vendidos", y `@theme` no traía un 4to color. */
+  --color-quaternary: #a78bfa;
+  --color-on-quaternary: #2e1065;
 
   --spacing-space-3xl: 4rem;
   --spacing-touch-target-min: 3rem;

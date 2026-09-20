@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  Legend,
 } from 'recharts';
 import type { SerieTemporalPunto } from '../../core/types/reporte.types';
 
@@ -55,27 +54,33 @@ export const ReportesChart = ({ data, tipo, metrica, titulo }: ChartProps) => {
   // Modo combinado: dual axis (monto + entradas)
   if (tipo === 'combinado') {
     return (
-      <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg">
-        <h3 className="font-headline-sm text-headline-sm text-on-surface mb-space-md">{titulo}</h3>
-        <div className="h-[300px]">
+      <div className="rounded-2xl bg-surface-container-low shadow-lg p-space-lg h-full flex flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-space-xs mb-space-md">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface">{titulo}</h3>
+          <div className="flex items-center gap-space-md font-body-xs text-body-xs text-on-surface-variant">
+            <span className="flex items-center gap-space-2xs">
+              <span className="w-2 h-2 rounded-full" style={{ background: COLORS.montoTotal }} />
+              Monto (Bs)
+            </span>
+            <span className="flex items-center gap-space-2xs">
+              <span className="w-2 h-2 rounded-full" style={{ background: COLORS.cantidadEntradas }} />
+              Entradas
+            </span>
+          </div>
+        </div>
+        <div className="h-[260px] flex-1">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 80, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="fecha" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
               <YAxis
                 yAxisId="left"
                 orientation="left"
-                tick={{ fontSize: 12 }}
-                tickFormatter={METRICA_FORMATTER.montoTotal}
-                label={{ value: 'Monto (Bs)', angle: -90, position: 'insideLeft', offset: 40, fill: 'var(--color-primary)' }}
+                tick={{ fontSize: 11 }}
+                width={40}
+                tickFormatter={(v) => Number(v).toLocaleString()}
               />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fontSize: 12 }}
-                tickFormatter={METRICA_FORMATTER.cantidadEntradas}
-                label={{ value: 'Entradas', angle: 90, position: 'insideRight', offset: -40, fill: 'var(--color-secondary)' }}
-              />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} width={32} />
               <Tooltip
                 formatter={(value, name) => {
                   if (name === 'montoTotal') return [METRICA_FORMATTER.montoTotal(value), 'Monto'];
@@ -84,7 +89,6 @@ export const ReportesChart = ({ data, tipo, metrica, titulo }: ChartProps) => {
                 }}
                 labelFormatter={(fecha) => fecha}
               />
-              <Legend />
               <Line
                 yAxisId="left"
                 type="monotone"
@@ -93,7 +97,7 @@ export const ReportesChart = ({ data, tipo, metrica, titulo }: ChartProps) => {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 6 }}
-                name="Monto"
+                name="montoTotal"
               />
               <Line
                 yAxisId="right"
@@ -104,7 +108,7 @@ export const ReportesChart = ({ data, tipo, metrica, titulo }: ChartProps) => {
                 dot={false}
                 activeDot={{ r: 6 }}
                 strokeDasharray="5 5"
-                name="Entradas"
+                name="cantidadEntradas"
               />
             </LineChart>
           </ResponsiveContainer>
