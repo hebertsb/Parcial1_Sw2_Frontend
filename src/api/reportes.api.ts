@@ -5,6 +5,8 @@ import type {
   ReportePorPelicula,
   ReportePorFuncion,
   ReportePorProducto,
+  ReportePorMetodoPago,
+  ReportePorPromocion,
   DashboardResponse,
   SerieTemporalPunto,
   PaginatedResponse,
@@ -50,6 +52,16 @@ export function obtenerReportePorProducto(filtro: RangoFechas, token: string): P
 
 export function obtenerReportePorProductoPaginado(filtro: RangoFechas, token: string): Promise<PaginatedResponse<ReportePorProducto>> {
   return apiFetch<PaginatedResponse<ReportePorProducto>>(`/reportes/por-producto/paginado${queryDeRango(filtro)}`, { token });
+}
+
+/** `GET /reportes/por-metodo-pago` — ventas por método de pago (efectivo/tarjeta/stripe). */
+export function obtenerReportePorMetodoPago(filtro: RangoFechas, token: string): Promise<ReportePorMetodoPago[]> {
+  return apiFetch<ReportePorMetodoPago[]>(`/reportes/por-metodo-pago${queryDeRango(filtro)}`, { token });
+}
+
+/** `GET /reportes/por-promocion` — ventas por promoción aplicada. */
+export function obtenerReportePorPromocion(filtro: RangoFechas, token: string): Promise<ReportePorPromocion[]> {
+  return apiFetch<ReportePorPromocion[]>(`/reportes/por-promocion${queryDeRango(filtro)}`, { token });
 }
 
 /** `GET /reportes/dashboard` — KPIs con variación vs periodo anterior. */

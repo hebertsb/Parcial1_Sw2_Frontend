@@ -6,6 +6,12 @@ export interface RangoFechas {
   hasta?: string;
   /** Si true, incluye estados no pagados. Default: false (solo pagada). */
   incluirNoPagadas?: boolean;
+  /** Agrupación temporal para serie: 'dia' | 'semana' | 'mes'. Default: 'dia'. */
+  agrupacion?: 'dia' | 'semana' | 'mes';
+  /** Límite de resultados por página. */
+  limit?: number;
+  /** Offset para paginación. */
+  offset?: number;
 }
 
 export interface ResumenVentas {
@@ -37,6 +43,20 @@ export interface ReportePorProducto {
   nombre: string;
   cantidadVendida: number;
   montoTotal: string;
+}
+
+export interface ReportePorMetodoPago {
+  metodoPago: string;
+  totalVentas: number;
+  montoTotal: string;
+}
+
+export interface ReportePorPromocion {
+  idPromocion: number;
+  nombre: string;
+  tipoDescuento: string;
+  totalVentas: number;
+  montoDescuento: string;
 }
 
 export interface SerieTemporalPunto {

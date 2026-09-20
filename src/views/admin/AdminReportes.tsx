@@ -5,6 +5,8 @@ import {
   obtenerReportePorPelicula,
   obtenerReportePorFuncion,
   obtenerReportePorProducto,
+  obtenerReportePorMetodoPago,
+  obtenerReportePorPromocion,
   obtenerDashboard,
   obtenerSerieTemporal,
   obtenerReportePorPeliculaPaginado,
@@ -17,12 +19,14 @@ import type {
   ReportePorPelicula,
   ReportePorFuncion,
   ReportePorProducto,
+  ReportePorMetodoPago,
+  ReportePorPromocion,
   DashboardResponse,
   DashboardMetrica,
   SerieTemporalPunto,
   PaginatedResponse,
 } from '../../core/types/reporte.types';
-import { ReportesTablaPelicula, ReportesTablaFuncion, ReportesTablaProducto } from './ReportesTablas';
+import { ReportesTablaPelicula, ReportesTablaFuncion, ReportesTablaProducto, ReportesTablaMetodoPago, ReportesTablaPromocion } from './ReportesTablas';
 import { ReportesChart } from './ReportesChart';
 
 /** CU05/RF08 — reportes reales (`GET /reportes/*`), reemplaza la telemetría hardcodeada. */
@@ -37,6 +41,8 @@ export const AdminReportes = () => {
   const [porPelicula, setPorPelicula] = useState<ReportePorPelicula[]>([]);
   const [porFuncion, setPorFuncion] = useState<ReportePorFuncion[]>([]);
   const [porProducto, setPorProducto] = useState<ReportePorProducto[]>([]);
+  const [porMetodoPago, setPorMetodoPago] = useState<ReportePorMetodoPago[]>([]);
+  const [porPromocion, setPorPromocion] = useState<ReportePorPromocion[]>([]);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [serieTemporal, setSerieTemporal] = useState<SerieTemporalPunto[]>([]);
   const [paginacion, setPaginacion] = useState<{
@@ -60,6 +66,8 @@ export const AdminReportes = () => {
         ventasPorPelicula,
         ventasPorFuncion,
         ventasPorProducto,
+        ventasPorMetodoPago,
+        ventasPorPromocion,
         dashboardData,
         serieTemporalData,
         peliculaPaginada,
@@ -70,6 +78,8 @@ export const AdminReportes = () => {
         obtenerReportePorPelicula(filtro, token),
         obtenerReportePorFuncion(filtro, token),
         obtenerReportePorProducto(filtro, token),
+        obtenerReportePorMetodoPago(filtro, token),
+        obtenerReportePorPromocion(filtro, token),
         obtenerDashboard(filtro, token),
         obtenerSerieTemporal(filtro, token),
         obtenerReportePorPeliculaPaginado(filtro, token),
@@ -81,6 +91,8 @@ export const AdminReportes = () => {
         setPorPelicula(ventasPorPelicula);
         setPorFuncion(ventasPorFuncion);
         setPorProducto(ventasPorProducto);
+        setPorMetodoPago(ventasPorMetodoPago);
+        setPorPromocion(ventasPorPromocion);
         setDashboard(dashboardData);
         setSerieTemporal(serieTemporalData);
         setPaginacion({
@@ -327,6 +339,16 @@ export const AdminReportes = () => {
           )}
         </div>
         <ReportesTablaProducto filas={porProducto} />
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por método de pago</h2>
+        </div>
+        <ReportesTablaMetodoPago filas={porMetodoPago} />
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Ventas por promoción</h2>
+        </div>
+        <ReportesTablaPromocion filas={porPromocion} />
       </div>
     </div>
   );

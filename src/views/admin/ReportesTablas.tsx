@@ -1,4 +1,4 @@
-import type { ReportePorPelicula, ReportePorFuncion, ReportePorProducto } from '../../core/types/reporte.types';
+import type { ReportePorPelicula, ReportePorFuncion, ReportePorProducto, ReportePorMetodoPago, ReportePorPromocion } from '../../core/types/reporte.types';
 
 const THEAD = 'py-space-sm px-space-md text-left font-label-code text-label-code uppercase text-outline';
 const TD = 'py-space-sm px-space-md font-body-sm text-body-sm text-on-surface';
@@ -90,6 +90,64 @@ export const ReportesTablaProducto = ({ filas }: { filas: ReportePorProducto[] }
               <td className={TD}>{fila.nombre}</td>
               <td className={TD}>{fila.cantidadVendida}</td>
               <td className={TD}>{fila.montoTotal} Bs</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+);
+
+export const ReportesTablaMetodoPago = ({ filas }: { filas: ReportePorMetodoPago[] }) => (
+  <div className="rounded-2xl bg-surface-container-low shadow-lg overflow-x-auto">
+    <h2 className="font-headline-sm text-headline-sm text-on-surface p-space-md pb-0">Ventas por método de pago</h2>
+    <table className="w-full min-w-[420px]">
+      <thead>
+        <tr>
+          <th className={THEAD}>Método</th>
+          <th className={THEAD}>Ventas</th>
+          <th className={THEAD}>Monto</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-surface-container">
+        {filas.length === 0 ? (
+          <tr><td className={TD} colSpan={3}>Sin ventas en el rango seleccionado.</td></tr>
+        ) : (
+          filas.map((fila) => (
+            <tr key={fila.metodoPago}>
+              <td className={TD}>{fila.metodoPago}</td>
+              <td className={TD}>{fila.totalVentas}</td>
+              <td className={TD}>{fila.montoTotal} Bs</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+);
+
+export const ReportesTablaPromocion = ({ filas }: { filas: ReportePorPromocion[] }) => (
+  <div className="rounded-2xl bg-surface-container-low shadow-lg overflow-x-auto">
+    <h2 className="font-headline-sm text-headline-sm text-on-surface p-space-md pb-0">Ventas por promoción</h2>
+    <table className="w-full min-w-[580px]">
+      <thead>
+        <tr>
+          <th className={THEAD}>Promoción</th>
+          <th className={THEAD}>Tipo descuento</th>
+          <th className={THEAD}>Ventas</th>
+          <th className={THEAD}>Descuento total</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-surface-container">
+        {filas.length === 0 ? (
+          <tr><td className={TD} colSpan={4}>Sin promociones aplicadas en el rango seleccionado.</td></tr>
+        ) : (
+          filas.map((fila) => (
+            <tr key={fila.idPromocion}>
+              <td className={TD}>{fila.nombre}</td>
+              <td className={TD}>{fila.tipoDescuento}</td>
+              <td className={TD}>{fila.totalVentas}</td>
+              <td className={TD}>{fila.montoDescuento} Bs</td>
             </tr>
           ))
         )}
