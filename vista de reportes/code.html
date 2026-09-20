@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#0a0e18]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LUMEN ADMIN CONSOLE - Reportes &amp; Ventas</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & Outfit -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+            jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            lumen: {
+              bg: '#0a0e18',
+              card: '#121622',
+              cardSubtle: '#181e2e',
+              border: 'rgba(255, 255, 255, 0.08)',
+              amber: '#f59e0b',
+              amberHover: '#d97706',
+              emerald: '#10b981',
+              cyan: '#38bdf8',
+              blue: '#3b82f6',
+              purple: '#a855f7',
+              violet: '#c084fc',
+              muted: '#8e9bb2',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars">
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d121f;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #232d42;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+<style data-purpose="glow-effects">
+    .glow-amber-subtle {
+      box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.25);
+    }
+    .glow-emerald-subtle {
+      box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3);
+    }
+    .chart-grid-line {
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-dasharray: 3 3;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col bg-[#0a0e18]">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- BEGIN: Sidebar -->
+<aside class="w-64 bg-[#0d121d] border-r border-white/5 flex flex-col justify-between shrink-0 select-none" data-purpose="left-sidebar">
+<div class="p-5">
+<!-- Logo Branding -->
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-amber-500/20">
+<!-- Theater Masks Icon -->
+<svg class="w-6 h-6 text-slate-950" fill="currentColor" viewbox="0 0 24 24">
+<path d="M4 3a2 2 0 0 0-2 2v6a7 7 0 0 0 14 0V5a2 2 0 0 0-2-2H4zm2 4a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm6 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm-5 4a3 3 0 0 0 4 0h1a4 4 0 0 1-6 0h1z"></path>
+<path d="M18 7a2 2 0 0 1 2 2v6a7 7 0 0 1-11.83 5.08A8.96 8.96 0 0 0 16 11V7h2zm-2 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm4 4a4.01 4.01 0 0 1-3.17 3.91A8.99 8.99 0 0 0 18 15h2z" opacity="0.7"></path>
+</svg>
+</div>
+<div>
+<h1 class="font-display font-extrabold text-base tracking-wider text-amber-400 leading-none">LUMEN</h1>
+<span class="text-[10px] font-semibold text-cyan-400 tracking-widest uppercase">Admin Console</span>
+</div>
+</div>
+<!-- Navigation Group -->
+<div class="mb-4">
+<span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 block mb-3">Módulos de Control</span>
+<nav aria-label="Sidebar Navigation" class="space-y-1.5">
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="16" rx="2" stroke-width="2" width="18" x="3" y="4"></rect>
+<line stroke-width="2" x1="8" x2="8" y1="2" y2="6"></line>
+<line stroke-width="2" x1="16" x2="16" y1="2" y2="6"></line>
+<line stroke-width="2" x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+<span>Cartelera &amp; Funciones</span>
+</a>
+<!-- Active Item: Reportes & Ventas -->
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-md shadow-amber-500/20 text-sm" href="#">
+<svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="18" rx="2" stroke-width="2" width="18" x="3" y="3"></rect>
+<line stroke-linecap="round" stroke-width="2" x1="8" x2="8" y1="17" y2="11"></line>
+<line stroke-linecap="round" stroke-width="2" x1="12" x2="12" y1="17" y2="7"></line>
+<line stroke-linecap="round" stroke-width="2" x1="16" x2="16" y1="17" y2="13"></line>
+</svg>
+<span>Reportes &amp; Ventas</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-width="2"></path>
+<circle cx="9" cy="7" r="4" stroke-width="2"></circle>
+<path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-width="2"></path>
+<path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-width="2"></path>
+</svg>
+<span>Usuarios</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"></path>
+</svg>
+<span>Auditoría &amp; Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 7h.01M7 3h5a1.99 1.99 0 0 1 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A1.994 1.994 0 0 1 3 12V5a2 2 0 0 1 2-2z" stroke-width="2"></path>
+</svg>
+<span>Precios &amp; Promos</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 18v3m16-3v3M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M4 14h16a2 2 0 0 0 2-2v-2H2v2a2 2 0 0 0 2 2z" stroke-width="2"></path>
+</svg>
+<span>Configuración Salas</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all text-sm font-medium" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3" stroke-width="2"></path>
+</svg>
+<span>Dulcería</span>
+</a>
+</nav>
+</div>
+</div>
+<!-- Kiosk Mode Return CTA -->
+<div class="p-4 border-t border-white/5 bg-[#090d15]">
+<button class="w-full py-2.5 px-3 rounded-lg bg-[#141926] hover:bg-[#1c2336] text-slate-300 hover:text-white border border-white/10 flex items-center justify-center gap-2.5 text-xs font-semibold tracking-wide transition-all shadow-sm">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="14" rx="2" stroke-width="2" width="20" x="2" y="3"></rect>
+<path d="M8 21h8M12 17v4" stroke-width="2"></path>
+<path d="M10 9l-2 2 2 2" stroke-width="2"></path>
+</svg>
+        Volver a Modo Kiosco
+      </button>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: MainContentWrapper -->
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- BEGIN: TopBar -->
+<header class="h-16 bg-[#0e1320] border-b border-white/5 px-6 flex items-center justify-between shrink-0 gap-4" data-purpose="top-navigation">
+<nav aria-label="Top Module Tabs" class="hidden lg:flex items-center gap-1.5 overflow-x-auto text-xs font-medium">
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Cartelera &amp; Funciones</a>
+<a class="px-3.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold whitespace-nowrap shadow-sm shadow-amber-500/30" href="#">Reportes &amp; Ventas</a>
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Usuarios</a>
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Auditoría &amp; Logs</a>
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Precios &amp; Promos</a>
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Configuración Salas</a>
+<a class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all whitespace-nowrap" href="#">Dulcería</a>
+</nav>
+<!-- Right Side: Status, Modes, Admin Profile -->
+<div class="flex items-center gap-4 ml-auto">
+<div class="flex items-center gap-2 bg-[#090d15] p-1 rounded-full border border-white/5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            EN LÍNEA • MIC APAGADO
+          </span>
+<div class="flex items-center gap-1 text-[11px] font-mono text-slate-400 px-2">
+<svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+<polyline points="12 6 12 12 16 14"></polyline>
+</svg>
+<span>02:19</span>
+</div>
+</div>
+<!-- Mode Switches -->
+<div class="hidden sm:flex items-center gap-1 bg-[#131826] p-1 rounded-xl border border-white/5 text-xs font-semibold">
+<button class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-1.5 shadow-sm">
+<svg class="w-3.5 h-3.5 text-slate-950" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 1 1 3 0m-3 6a1.5 1.5 0 0 0-3 0v2a7.5 7.5 0 0 0 15 0v-5a1.5 1.5 0 0 0-3 0m-6-3V7.5a1.5 1.5 0 0 1 3 0v4m0-4V9a1.5 1.5 0 0 1 3 0v5" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+            Modo Táctil
+          </button>
+<button class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors">
+<svg class="w-3.5 h-3.5 text-amber-300" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6.4-4.8-6.4 4.8 2.4-7.2-6-4.8h7.6z"></path>
+</svg>
+            Voz + UI Dinámica
+          </button>
+<button class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors">
+<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 11a7 7 0 0 1-7 7m0 0a7 7 0 0 1-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 0 1-3-3V5a3 3 0 1 1 6 0v6a3 3 0 0 1-3 3z" stroke-width="2"></path>
+</svg>
+            Solo Voz (Puro)
+          </button>
+</div>
+<!-- User Profile & Logoff -->
+<div class="flex items-center gap-3 pl-2 border-l border-white/10">
+<div class="text-right hidden sm:block">
+<div class="text-xs font-bold text-slate-200">Admin Lumen</div>
+<div class="text-[10px] tracking-wider font-semibold text-amber-400 uppercase">ADMINISTRADOR</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-sm hover:ring-2 hover:ring-amber-400/50 transition-all" title="Perfil Admin">
+<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2"></path>
+</svg>
+</button>
+<button class="text-slate-400 hover:text-rose-400 transition-colors p-1" title="Cerrar Sesión">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</header>
+<!-- END: TopBar -->
+<!-- BEGIN: MainDashboardContent -->
+<main class="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-[#0b0f19]">
+<!-- BEGIN: PageHeader & Filters -->
+<section class="flex flex-col gap-4 bg-[#121622] border border-white/5 rounded-2xl p-5" data-purpose="report-header-filter-bar">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold tracking-wider mb-2">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              CU05 • DATOS REALES
+            </div>
+<h2 class="text-2xl font-display font-extrabold text-white tracking-tight">Reportes de Ventas</h2>
+<p class="text-xs text-slate-400 mt-0.5">Análisis del rendimiento comercial del cine y toma de decisiones</p>
+</div>
+<!-- Quick Date Pill Presets -->
+<div class="flex flex-wrap items-center gap-1.5 bg-[#090d15] p-1.5 rounded-xl border border-white/5">
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">Hoy</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">Ayer</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">Esta semana</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm">Este mes (Activo)</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">Mes anterior</button>
+</div>
+</div>
+<!-- Filter Controls Row -->
+<div class="pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
+<div class="flex flex-wrap items-center gap-3">
+<!-- Grouping Granularity Tabs -->
+<div class="flex items-center gap-1 bg-[#0d121d] border border-white/10 p-1 rounded-xl">
+<span class="text-[10px] uppercase font-bold text-slate-500 px-2">Agrupar</span>
+<button class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold shadow-sm">Día</button>
+<button class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors">Semana</button>
+<button class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors">Mes</button>
+</div>
+<!-- Date Range Selector Container -->
+<div class="flex items-center gap-2 bg-[#0d121d] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200">
+<svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="18" rx="2" stroke-width="2" width="18" x="3" y="4"></rect>
+<line stroke-width="2" x1="16" x2="16" y1="2" y2="6"></line>
+<line stroke-width="2" x1="8" x2="8" y1="2" y2="6"></line>
+<line stroke-width="2" x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+<span class="font-mono font-medium">01/09/2026</span>
+<span class="text-slate-500">—</span>
+<span class="font-mono font-medium">20/09/2026</span>
+<button class="text-slate-400 hover:text-white pl-1" title="Cambiar rango de calendario">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Filter and Reset Action Buttons -->
+<button class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all">
+<svg class="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+</svg>
+              Filtrar
+            </button>
+<button class="px-3.5 py-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-400 hover:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition-all">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-width="2"></path></svg>
+              Restablecer
+            </button>
+</div>
+<!-- Active Period Summary Message -->
+<div class="flex items-center gap-2 text-slate-400 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+<span>Mostrando <strong class="text-slate-200">20 días activos</strong> • Período comparado: <strong class="text-slate-200">20 días previos</strong></span>
+</div>
+</div>
+</section>
+<!-- END: PageHeader & Filters -->
+<!-- BEGIN: Notice Banner for Confirmed Sales Only -->
+<div class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-cyan-300 text-xs">
+<div class="flex items-center gap-2.5">
+<svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"></path>
+</svg>
+<span><strong>Información de conciliación:</strong> Las ventas pendientes o canceladas no se computan en la recaudación real. Todos los montos corresponden a operaciones pagadas y liquidadas.</span>
+</div>
+<span class="text-[10px] uppercase font-mono text-cyan-400/80 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20 hidden md:inline">CU05-RF08 COMPLIANT</span>
+</div>
+<!-- END: Notice Banner -->
+<!-- BEGIN: KPIOverviewCards (4 Critical KPIs) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-purpose="kpi-metric-cards">
+<!-- KPI 1: Ventas Pagadas -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-amber-500/40 transition-all">
+<div class="flex items-start justify-between">
+<div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<circle cx="9" cy="21" r="1" stroke-width="2"></circle>
+<circle cx="20" cy="21" r="1" stroke-width="2"></circle>
+<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              ↑ +28%
+            </span>
+</div>
+<div class="mt-3">
+<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">VENTAS PAGADAS</span>
+<div class="text-3xl font-display font-extrabold text-white mt-0.5">18</div>
+<div class="text-[11px] text-slate-400 mt-1">18 transacciones liquidadas</div>
+</div>
+</div>
+<!-- KPI 2: Monto Recaudado -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-emerald-500/40 transition-all">
+<div class="flex items-start justify-between">
+<div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="12" rx="2" stroke-width="2" width="20" x="2" y="6"></rect>
+<circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+<path d="M6 12h.01M18 12h.01" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              ↑ +35%
+            </span>
+</div>
+<div class="mt-3">
+<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">MONTO RECAUDADO</span>
+<div class="text-3xl font-display font-extrabold text-emerald-400 mt-0.5">
+              1,707.00 <span class="text-sm font-sans font-semibold text-slate-300">Bs</span>
+</div>
+<div class="text-[11px] text-slate-400 mt-1">Ingreso neto cobrado en caja/online</div>
+</div>
+</div>
+<!-- KPI 3: Entradas Vendidas -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-cyan-500/40 transition-all">
+<div class="flex items-start justify-between">
+<div class="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 5v2m0 4v2m0 4v2M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a3 3 0 0 0 0 6v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a3 3 0 0 0 0-6V5z" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              ↑ +25%
+            </span>
+</div>
+<div class="mt-3">
+<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">ENTRADAS VENDIDAS</span>
+<div class="text-3xl font-display font-extrabold text-cyan-400 mt-0.5">30</div>
+<div class="text-[11px] text-slate-400 mt-1">Ocupación de butacas registradas</div>
+</div>
+</div>
+<!-- KPI 4: Productos Vendidos -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-purple-500/40 transition-all">
+<div class="flex items-start justify-between">
+<div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 10h10l-1.5 11h-7L7 10z" stroke-width="2"></path>
+<path d="M5 10c0-1.5 1-3 2.5-3 .5 0 1 .2 1.5.5C9.5 6 11 5 12 5s2.5 1 3 2.5c.5-.3 1-.5 1.5-.5 1.5 0 2.5 1.5 2.5 3" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              ↑ +18%
+            </span>
+</div>
+<div class="mt-3">
+<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">PRODUCTOS VENDIDOS</span>
+<div class="text-3xl font-display font-extrabold text-purple-400 mt-0.5">42</div>
+<div class="text-[11px] text-slate-400 mt-1">Unidades totales de confitería</div>
+</div>
+</div>
+</section>
+<!-- END: KPIOverviewCards -->
+<!-- BEGIN: InsightsSection (CU05 Decision Support) -->
+<section class="bg-[#121622] border border-amber-500/20 rounded-2xl p-5 relative overflow-hidden" data-purpose="period-insights">
+<div class="absolute -right-10 -bottom-10 w-48 h-48 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center justify-between mb-3.5">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold">⚡</span>
+<h3 class="text-sm font-bold font-display text-white tracking-wide">ANÁLISIS DEL PERÍODO &amp; INSIGHTS (CU05)</h3>
+</div>
+<span class="text-[11px] text-slate-400 font-mono">Motor de Recomendación Inteligente LUMEN</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+<div class="bg-[#171d2b] border border-white/5 rounded-xl p-3.5 flex items-start gap-3">
+<span class="text-base shrink-0 mt-0.5">💡</span>
+<p class="text-xs text-slate-300 leading-relaxed">
+              La recaudación creció un <strong class="text-emerald-400">+35%</strong> impulsada principalmente por <strong class="text-slate-100">Spider-Man: Beyond</strong> y <strong class="text-slate-100">Combo Popcorn Extragrande</strong>.
+            </p>
+</div>
+<div class="bg-[#171d2b] border border-white/5 rounded-xl p-3.5 flex items-start gap-3">
+<span class="text-base shrink-0 mt-0.5">🎟️</span>
+<p class="text-xs text-slate-300 leading-relaxed">
+              Las entradas aumentaron un <strong class="text-cyan-400">+25%</strong>, con un ticket promedio de <strong class="text-slate-100">56.90 Bs</strong> por transacción en boletería.
+            </p>
+</div>
+<div class="bg-[#171d2b] border border-white/5 rounded-xl p-3.5 flex items-start gap-3">
+<span class="text-base shrink-0 mt-0.5">🍿</span>
+<p class="text-xs text-slate-300 leading-relaxed">
+              Dulcería representa el <strong class="text-purple-400">44.8%</strong> del ingreso total del período (alta concentración en Combo Popcorn con 540.00 Bs).
+            </p>
+</div>
+<div class="bg-[#171d2b] border border-white/5 rounded-xl p-3.5 flex items-start gap-3">
+<span class="text-base shrink-0 mt-0.5">💳</span>
+<p class="text-xs text-slate-300 leading-relaxed">
+              QR Simple y Tarjeta concentran el <strong class="text-amber-400">82.0%</strong> del volumen de cobros frente a Efectivo, acelerando la atención en mostrador.
+            </p>
+</div>
+</div>
+</section>
+<!-- END: InsightsSection -->
+<!-- BEGIN: DynamicChartsRow (Tendencias, Métodos de Pago, Promociones) -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-5" data-purpose="charts-row">
+<!-- Chart A: Evolución de Ventas (Line Chart with Simulated Tooltip) -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+<h3 class="text-sm font-bold text-white tracking-wide">Evolución de Ventas</h3>
+</div>
+<!-- Legend -->
+<div class="flex items-center gap-3 text-[11px]">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+<span class="text-slate-300">Monto (Bs)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+<span class="text-slate-300">Entradas</span>
+</div>
+</div>
+</div>
+<p class="text-[11px] text-slate-400 mb-3">Recaudación diaria vs. Ocupación de butacas</p>
+<!-- SVG Line Graph Container -->
+<div class="w-full h-52 relative">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 380 180">
+<defs>
+<lineargradient id="gradientMonto" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#10b981" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#10b981" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Horizontal Y Grid & Labels -->
+<line class="chart-grid-line" x1="35" x2="370" y1="20" y2="20"></line>
+<text fill="#64748b" font-size="9" text-anchor="end" x="30" y="24">500</text>
+<line class="chart-grid-line" x1="35" x2="370" y1="55" y2="55"></line>
+<text fill="#64748b" font-size="9" text-anchor="end" x="30" y="59">400</text>
+<line class="chart-grid-line" x1="35" x2="370" y1="90" y2="90"></line>
+<text fill="#64748b" font-size="9" text-anchor="end" x="30" y="94">300</text>
+<line class="chart-grid-line" x1="35" x2="370" y1="125" y2="125"></line>
+<text fill="#64748b" font-size="9" text-anchor="end" x="30" y="129">200</text>
+<line class="chart-grid-line" x1="35" x2="370" y1="155" y2="155"></line>
+<text fill="#64748b" font-size="9" text-anchor="end" x="30" y="159">0</text>
+<!-- Monto (Emerald) Area and Path -->
+<path d="M 45 150 L 80 120 L 115 140 L 150 100 L 185 125 L 220 120 L 255 105 L 290 65 L 325 90 L 325 155 L 45 155 Z" fill="url(#gradientMonto)"></path>
+<path d="M 45 150 L 80 120 L 115 140 L 150 100 L 185 125 L 220 120 L 255 105 L 290 65 L 325 90" fill="none" stroke="#10b981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<!-- Entradas (Cyan) Path -->
+<path d="M 45 155 L 80 145 L 115 150 L 150 135 L 185 148 L 220 152 L 255 145 L 290 125 L 325 130" fill="none" stroke="#38bdf8" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<!-- Vertical Hover Line for Peak Day (290px -> 17 Sep) -->
+<line stroke="rgba(245, 158, 11, 0.4)" stroke-dasharray="2 2" stroke-width="1.5" x1="290" x2="290" y1="20" y2="155"></line>
+<!-- Emerald Data Points -->
+<circle cx="45" cy="150" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="80" cy="120" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="115" cy="140" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="150" cy="100" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="185" cy="125" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="220" cy="120" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="255" cy="105" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="290" cy="65" fill="#f59e0b" r="4.5" stroke="#0a0e18" stroke-width="2"></circle>
+<circle cx="325" cy="90" fill="#10b981" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<!-- Cyan Data Points -->
+<circle cx="45" cy="155" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="80" cy="145" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="115" cy="150" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="150" cy="135" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="185" cy="148" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="220" cy="152" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="255" cy="145" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="290" cy="125" fill="#38bdf8" r="3.5" stroke="#0a0e18" stroke-width="1.5"></circle>
+<circle cx="325" cy="130" fill="#38bdf8" r="3" stroke="#0a0e18" stroke-width="1.5"></circle>
+<!-- X Axis Day Labels -->
+<text fill="#64748b" font-size="9" text-anchor="middle" x="45" y="172">01 Sep</text>
+<text fill="#64748b" font-size="9" text-anchor="middle" x="115" y="172">05 Sep</text>
+<text fill="#64748b" font-size="9" text-anchor="middle" x="185" y="172">10 Sep</text>
+<text fill="#64748b" font-size="9" text-anchor="middle" x="255" y="172">15 Sep</text>
+<text fill="#64748b" font-size="9" text-anchor="middle" x="325" y="172">20 Sep</text>
+</svg>
+<!-- Simulated Tooltip for Peak Date -->
+<div class="absolute top-4 right-14 bg-[#090d16] border border-amber-500/40 rounded-lg p-2 shadow-xl text-[10px] space-y-0.5 pointer-events-none">
+<div class="font-bold text-amber-400">17 Sep • Pico semanal</div>
+<div class="text-emerald-400 font-mono">Recaudación: 420.00 Bs</div>
+<div class="text-cyan-400 font-mono">Entradas: 8 tickets</div>
+</div>
+</div>
+</div>
+<!-- Chart B: Métodos de Pago (GET /reportes/por-metodo-pago) -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="16" rx="2" stroke-width="2" width="22" x="1" y="4"></rect>
+<line stroke-width="2" x1="1" x2="23" y1="10" y2="10"></line>
+</svg>
+<h3 class="text-sm font-bold text-white tracking-wide">Métodos de Pago</h3>
+</div>
+<span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">/por-metodo-pago</span>
+</div>
+<p class="text-[11px] text-slate-400 mb-3.5">Volumen y recaudación por canal de liquidación</p>
+<!-- Method Items Breakdown -->
+<div class="space-y-3">
+<!-- QR Simple -->
+<div class="bg-[#171d2c] p-2.5 rounded-xl">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-slate-200 flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> QR Simple / Transferencia
+                  </span>
+<div class="text-right">
+<span class="font-mono font-bold text-cyan-400">990.00 Bs</span>
+<span class="text-[10px] text-slate-400 ml-1">(58.0%)</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+<span>10 pagos confirmados</span>
+<span class="font-mono">Ticket prom: 99.00 Bs</span>
+</div>
+<div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-cyan-400 h-full rounded-full" style="width: 58%;"></div>
+</div>
+</div>
+<!-- Tarjeta Débito / Crédito -->
+<div class="bg-[#171d2c] p-2.5 rounded-xl">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-slate-200 flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Tarjeta Débito / Crédito
+                  </span>
+<div class="text-right">
+<span class="font-mono font-bold text-amber-400">410.00 Bs</span>
+<span class="text-[10px] text-slate-400 ml-1">(24.0%)</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+<span>5 pagos confirmados</span>
+<span class="font-mono">Ticket prom: 82.00 Bs</span>
+</div>
+<div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-amber-400 h-full rounded-full" style="width: 24%;"></div>
+</div>
+</div>
+<!-- Efectivo -->
+<div class="bg-[#171d2c] p-2.5 rounded-xl">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-slate-200 flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Efectivo en Boletería
+                  </span>
+<div class="text-right">
+<span class="font-mono font-bold text-emerald-400">307.00 Bs</span>
+<span class="text-[10px] text-slate-400 ml-1">(18.0%)</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+<span>3 pagos confirmados</span>
+<span class="font-mono">Ticket prom: 102.33 Bs</span>
+</div>
+<div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-emerald-400 h-full rounded-full" style="width: 18%;"></div>
+</div>
+</div>
+<!-- Otros / Billetera Móvil -->
+<div class="bg-[#171d2c]/60 p-2 rounded-xl text-slate-500 flex items-center justify-between text-[11px]">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-slate-600"></span> Billetera Móvil / Otros canales
+                </span>
+<span class="font-mono">0 pagos (0.00 Bs - 0.0%)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Chart C: Promociones Utilizadas (GET /reportes/por-promocion) -->
+<div class="bg-[#121622] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 7h.01M7 3h5a1.99 1.99 0 0 1 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A1.994 1.994 0 0 1 3 12V5a2 2 0 0 1 2-2z" stroke-width="2"></path>
+</svg>
+<h3 class="text-sm font-bold text-white tracking-wide">Promociones Utilizadas</h3>
+</div>
+<span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">/por-promocion</span>
+</div>
+<p class="text-[11px] text-slate-400 mb-3.5">Impacto en volumen, descuentos y recaudación asociada</p>
+<div class="space-y-3">
+<!-- Promo 1: 2x1 Miércoles de Estreno -->
+<div class="bg-[#171d2c] p-3 rounded-xl border-l-4 border-purple-500">
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-semibold text-slate-100">2x1 Miércoles de Estreno</span>
+<span class="font-mono font-bold text-emerald-400">480.00 Bs recaudados</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400">
+<span class="flex items-center gap-1.5">
+<strong class="text-purple-300">8 usos</strong> en el período
+                  </span>
+<span class="text-rose-400 font-mono">Descuento: -120.00 Bs</span>
+</div>
+</div>
+<!-- Promo 2: Combo Pareja Cine -->
+<div class="bg-[#171d2c] p-3 rounded-xl border-l-4 border-cyan-500">
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-semibold text-slate-100">Combo Pareja Cine</span>
+<span class="font-mono font-bold text-emerald-400">310.00 Bs recaudados</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400">
+<span class="flex items-center gap-1.5">
+<strong class="text-cyan-300">5 usos</strong> en el período
+                  </span>
+<span class="text-rose-400 font-mono">Descuento: -45.00 Bs</span>
+</div>
+</div>
+<!-- Promo 3: Estudiante Universitario -->
+<div class="bg-[#171d2c] p-3 rounded-xl border-l-4 border-amber-500">
+<div class="flex items-center justify-between text-xs mb-1">
+<span class="font-semibold text-slate-100">Estudiante Universitario</span>
+<span class="font-mono font-bold text-emerald-400">150.00 Bs recaudados</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400">
+<span class="flex items-center gap-1.5">
+<strong class="text-amber-300">3 usos</strong> en el período
+                  </span>
+<span class="text-rose-400 font-mono">Descuento: -30.00 Bs</span>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
+<span>Total ahorro otorgado:</span>
+<span class="font-mono text-rose-400 font-semibold">-195.00 Bs</span>
+</div>
+</div>
+</div>
+</section>
+<!-- END: DynamicChartsRow -->
+<!-- BEGIN: DetailedDataSection (Dos Tablas Principales) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-6" data-purpose="advanced-data-tables">
+<!-- TABLA 1: Rendimiento por Película (GET /reportes/por-pelicula) -->
+<div class="lg:col-span-7 bg-[#121622] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+<div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="16" rx="2" stroke-width="2" width="20" x="2" y="4"></rect>
+<path d="M7 4v16M17 4v16M2 9h20M2 15h20" stroke-width="2"></path>
+</svg>
+<h3 class="text-sm font-bold text-white tracking-wide">Ventas por Película</h3>
+<span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">/por-pelicula</span>
+</div>
+<!-- Sorters -->
+<div class="flex items-center gap-1 bg-[#090d15] p-1 rounded-xl text-[11px] border border-white/5">
+<span class="text-[10px] text-slate-500 font-bold px-1 uppercase">Ordenar:</span>
+<button class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold">Mayor Recaudación ▼</button>
+<button class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition-colors">Más Entradas</button>
+<button class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition-colors">Más Ventas</button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="text-slate-400 border-b border-white/5 font-semibold text-[11px]">
+<th class="pb-2.5 font-normal">PELÍCULA</th>
+<th class="pb-2.5 font-normal text-center">VENTAS</th>
+<th class="pb-2.5 font-normal text-center">ENTRADAS</th>
+<th class="pb-2.5 font-normal text-center">PROD. DULCERÍA</th>
+<th class="pb-2.5 font-normal text-right">MONTO</th>
+<th class="pb-2.5 font-normal pl-4">% TOTAL</th>
+<th class="pb-2.5 w-16 text-right">ACCIÓN</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Row 1: Spider-Man -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></span>
+<span>Spider-Man: Beyond</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">6</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">10</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">12</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">740.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">43.3%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-cyan-400 h-full rounded-full" style="width: 85%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold" title="Ver detalle de funciones">
+                        Detalle
+                      </button>
+</td>
+</tr>
+<!-- Row 2: El Viaje de Chihiro -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-400 shrink-0"></span>
+<span>El Viaje de Chihiro</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">4</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">8</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">10</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">349.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">20.4%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-purple-400 h-full rounded-full" style="width: 44%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold">
+                        Detalle
+                      </button>
+</td>
+</tr>
+<!-- Row 3: La toalla del modajo -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+<span>La toalla del modajo</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">2</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">3</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">8</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">235.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">13.8%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-emerald-400 h-full rounded-full" style="width: 28%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold">
+                        Detalle
+                      </button>
+</td>
+</tr>
+<!-- Row 4: Top Gun: Maverick -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+<span>Top Gun: Maverick</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">2</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">4</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">4</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">168.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">9.8%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-slate-400 h-full rounded-full" style="width: 20%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold">
+                        Detalle
+                      </button>
+</td>
+</tr>
+<!-- Row 5: Blade Runner 2049 -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
+<span>Blade Runner 2049</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">2</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">2</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">3</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">110.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">6.4%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-blue-400 h-full rounded-full" style="width: 15%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold">
+                        Detalle
+                      </button>
+</td>
+</tr>
+<!-- Row 6: Oppenheimer -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="py-2.5 font-medium text-slate-100 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+<span>Oppenheimer</span>
+</td>
+<td class="py-2.5 text-center text-slate-300 font-mono">2</td>
+<td class="py-2.5 text-center text-cyan-400 font-mono font-semibold">3</td>
+<td class="py-2.5 text-center text-purple-400 font-mono">5</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">105.00 Bs</td>
+<td class="py-2.5 pl-4">
+<div class="flex items-center gap-2">
+<span class="w-10 text-slate-300 text-[11px] font-mono">6.1%</span>
+<div class="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-amber-400 h-full rounded-full" style="width: 14%;"></div>
+</div>
+</div>
+</td>
+<td class="py-2.5 text-right">
+<button class="px-2 py-1 rounded bg-white/5 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors text-[11px] font-semibold">
+                        Detalle
+                      </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
+<span>6 películas con actividad en el período seleccionado</span>
+<span class="text-amber-400 font-semibold cursor-pointer hover:underline flex items-center gap-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2"></path></svg>
+              Descargar reporte detallado CSV
+            </span>
+</div>
+</div>
+<!-- TABLA 2: Rendimiento de Dulcería (GET /reportes/por-producto) -->
+<div class="lg:col-span-5 bg-[#121622] border border-white/5 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+<div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" stroke-width="2"></path>
+</svg>
+<h3 class="text-sm font-bold text-white tracking-wide">Rendimiento de Dulcería</h3>
+<span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded">/por-producto</span>
+</div>
+<!-- Sorters Dulcería -->
+<div class="flex items-center gap-1 bg-[#090d15] p-1 rounded-xl text-[11px] border border-white/5">
+<button class="px-2 py-0.5 rounded bg-purple-500 text-white font-bold">Mayor Recaudación ▼</button>
+<button class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition-colors">Mayor Cantidad</button>
+</div>
+</div>
+<!-- Products List Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="text-slate-400 border-b border-white/5 font-semibold text-[11px]">
+<th class="pb-2.5 font-normal">PRODUCTO</th>
+<th class="pb-2.5 font-normal">CATEGORÍA</th>
+<th class="pb-2.5 font-normal text-center">CANTIDAD</th>
+<th class="pb-2.5 font-normal text-right">TOTAL</th>
+<th class="pb-2.5 font-normal text-right">% PART.</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Prod 1: Combo Popcorn -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-2.5 font-medium text-slate-200">Combo Popcorn Extragrande</td>
+<td class="py-2.5 text-[11px] text-slate-400">Combos &amp; Snacks</td>
+<td class="py-2.5 text-center font-mono font-bold text-purple-400">18 uds</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">540.00 Bs</td>
+<td class="py-2.5 text-right font-mono text-slate-300">31.6%</td>
+</tr>
+<!-- Prod 2: Refresco Mediano -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-2.5 font-medium text-slate-200">Refresco Mediano (2x)</td>
+<td class="py-2.5 text-[11px] text-slate-400">Bebidas Frías</td>
+<td class="py-2.5 text-center font-mono font-bold text-cyan-400">14 uds</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">280.00 Bs</td>
+<td class="py-2.5 text-right font-mono text-slate-300">16.4%</td>
+</tr>
+<!-- Prod 3: Nachos con Queso -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-2.5 font-medium text-slate-200">Nachos con Queso Supremo</td>
+<td class="py-2.5 text-[11px] text-slate-400">Calientes</td>
+<td class="py-2.5 text-center font-mono font-bold text-amber-400">6 uds</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">180.00 Bs</td>
+<td class="py-2.5 text-right font-mono text-slate-300">10.5%</td>
+</tr>
+<!-- Prod 4: Chocolates & Golosinas -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-2.5 font-medium text-slate-200">Chocolates &amp; Golosinas</td>
+<td class="py-2.5 text-[11px] text-slate-400">Confitería Dulce</td>
+<td class="py-2.5 text-center font-mono font-bold text-slate-300">4 uds</td>
+<td class="py-2.5 text-right font-mono font-bold text-emerald-400">70.00 Bs</td>
+<td class="py-2.5 text-right font-mono text-slate-300">4.1%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Subtotal Banner -->
+<div class="mt-4 p-3 rounded-xl bg-[#171d2c] flex items-center justify-between text-xs">
+<span class="text-slate-400">Subtotal Confitería (42 unidades):</span>
+<span class="font-mono text-emerald-400 font-bold text-sm">1,070.00 Bs</span>
+</div>
+</div>
+<div class="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
+<span>Margen estimado de dulcería: ~64.2%</span>
+<span class="text-purple-400 font-semibold cursor-pointer hover:underline">Gestionar Inventario →</span>
+</div>
+</div>
+</section>
+<!-- END: DetailedDataSection -->
+<!-- BEGIN: Backend Integration Footer Badge -->
+<footer class="pt-2 pb-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span>LUMEN CINEMA PLATFORM v2.4 • Módulo de Inteligencia de Negocios y Auditoría Fiscal</span>
+</div>
+<div class="font-mono text-[10px] bg-[#121622] px-3 py-1 rounded-lg border border-white/5 text-slate-400">
+          Conectores Backend: <span class="text-amber-400/90">/reportes/dashboard</span> • <span class="text-amber-400/90">/reportes/por-pelicula</span> • <span class="text-amber-400/90">/reportes/por-producto</span> • <span class="text-amber-400/90">/reportes/por-metodo-pago</span> • <span class="text-amber-400/90">/reportes/por-promocion</span>
+</div>
+</footer>
+<!-- END: Backend Integration Footer Badge -->
+</main>
+<!-- END: MainDashboardContent -->
+</div>
+<!-- END: MainContentWrapper -->
+</div>
+<!-- BEGIN: InteractiveScripts -->
+<script data-purpose="toggle-handling">
+  document.addEventListener('DOMContentLoaded', () => {
+    const interactiveButtons = document.querySelectorAll('button');
+    interactiveButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        btn.classList.add('scale-95');
+        setTimeout(() => btn.classList.remove('scale-95'), 120);
+      });
+    });
+  });
+</script>
+<!-- END: InteractiveScripts -->
+</body></html>

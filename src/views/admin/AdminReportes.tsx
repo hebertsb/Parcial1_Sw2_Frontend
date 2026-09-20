@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../controllers/AuthContext';
+import { useToast } from '../../hooks/useToast';
 import { diasEnRango, formatearFechaLegible } from '../../core/reportes.utils';
 import {
   obtenerResumenVentas,
@@ -32,10 +33,12 @@ import { ReportesCardMetodoPago, ReportesCardPromocion } from './ReportesCards';
 import { ReportesFiltros } from './ReportesFiltros';
 import { ReportesInsights } from './ReportesInsights';
 import { ReportesChart } from './ReportesChart';
+import { KPISkeleton, TablaSkeleton, ChartSkeleton, KPIsGridSkeleton } from './ReportesSkeletons';
 
 /** CU05/RF08 — reportes reales (`GET /reportes/*`), reemplaza la telemetría hardcodeada. */
 export const AdminReportes = () => {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [filtro, setFiltro] = useState<RangoFechas>({
     agrupacion: 'dia',
     limit: 50,
@@ -112,6 +115,7 @@ export const AdminReportes = () => {
       }
     } catch (error) {
       console.error('No se pudieron cargar los reportes reales.', error);
+      showToast('No se pudieron cargar los reportes. Intenta de nuevo.', 'error');
     } finally {
       if (!cancelado) setCargando(false);
     }
@@ -162,7 +166,7 @@ export const AdminReportes = () => {
     label: string,
     valor: string,
     variacion?: DashboardMetrica,
-    color: 'primary' | 'tertiary' | 'secondary' = 'primary',
+    color: 'primary' | 'tertiary' | 'secondary' | 'quaternary' = 'primary',
   ) => (
     <div className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-2xs">
       <span className="font-label-code text-label-code uppercase tracking-wider text-outline">{label}</span>
@@ -220,10 +224,22 @@ export const AdminReportes = () => {
         </div>
       )}
 
-      {cargando && <p className="font-label-md text-label-md text-on-surface-variant">Cargando reportes...</p>}
+      {/* Skeleton loading state */}
+      {cargando && (
+        <>
+          <KPIsGridSkeleton count={4} />
+          <ChartSkeleton titulo="Tendencia de monto recaudado" />
+          <ChartSkeleton titulo="Entradas vendidas por periodo" />
+          <TablaSkeleton filas={5} columnas={4} />
+          <TablaSkeleton filas={5} columnas={6} />
+          <TablaSkeleton filas={5} columnas={3} />
+          <TablaSkeleton filas={5} columnas={3} />
+          <TablaSkeleton filas={5} columnas={4} />
+        </>
+      )}
 
-      {dashboard && resumen && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+      {!cargando && dashboard && resumen && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md">
           {renderKPI(
             'Ventas totales',
             String(resumen.totalVentas),
@@ -241,6 +257,16 @@ export const AdminReportes = () => {
             String(resumen.cantidadEntradas),
             dashboard.cantidadEntradas,
             'secondary',
+          )}
+          {renderKPI(
+            'Productos vendidos',
+            String(porProducto.reduce((acc, p) => acc + p.cantidadVendida, 0)),
+            {
+              actual: porProducto.reduce((acc, p) => acc + p.cantidadVendida, 0),
+              anterior: 0,
+              variacionPorcentual: null,
+            },
+            'quaternary',
           )}
         </div>
       )}
@@ -269,20 +295,11 @@ export const AdminReportes = () => {
       />
 
       {serieTemporal.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
-          <ReportesChart
-            data={serieTemporal}
-            tipo="linea"
-            metrica="montoTotal"
-            titulo="Tendencia de monto recaudado"
-          />
-          <ReportesChart
-            data={serieTemporal}
-            tipo="barras"
-            metrica="cantidadEntradas"
-            titulo="Entradas vendidas por periodo"
-          />
-        </div>
+        <ReportesChart
+          data={serieTemporal}
+          tipo="combinado"
+          titulo="Evolución de Ventas: Monto (Bs) + Entradas"
+        />
       )}
 
       <div className="flex flex-col gap-space-md">
