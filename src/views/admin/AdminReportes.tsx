@@ -63,6 +63,13 @@ export const AdminReportes = () => {
     producto: { limit: 50, offset: 0 },
   });
   
+  const [filtro, setFiltro] = useState<RangoFechas>(filtroGuardado);
+  const [filtroDraft, setFiltroDraft] = useState<RangoFechas>({
+    agrupacion: 'dia',
+    limit: 50,
+    offset: 0,
+  });
+  
   // Debounce para filtroDraft (evita requests en cada keystroke)
   const filtroDraftDebounced = useDebounce(filtroDraft, 300);
   
@@ -82,13 +89,6 @@ export const AdminReportes = () => {
       setFiltro(f => ({ ...f, limit: paginacionGuardada.pelicula.limit, offset: paginacionGuardada.pelicula.offset }));
     }
   }, [paginacionGuardada]);
-  
-  const [filtro, setFiltro] = useState<RangoFechas>(filtroGuardado);
-  const [filtroDraft, setFiltroDraft] = useState<RangoFechas>({
-    agrupacion: 'dia',
-    limit: 50,
-    offset: 0,
-  });
   const [resumen, setResumen] = useState<ResumenVentas | null>(null);
   const [porPelicula, setPorPelicula] = useState<ReportePorPelicula[]>([]);
   const [porFuncion, setPorFuncion] = useState<ReportePorFuncion[]>([]);
