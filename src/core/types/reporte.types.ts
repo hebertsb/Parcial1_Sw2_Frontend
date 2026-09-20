@@ -4,6 +4,8 @@ export interface RangoFechas {
   desde?: string;
   /** ISO `YYYY-MM-DD`, inclusiva. */
   hasta?: string;
+  /** Si true, incluye estados no pagados. Default: false (solo pagada). */
+  incluirNoPagadas?: boolean;
 }
 
 export interface ResumenVentas {
@@ -28,4 +30,23 @@ export interface ReportePorFuncion {
   totalVentas: number;
   montoTotal: string;
   cantidadEntradas: number;
+}
+
+export interface ReportePorProducto {
+  idProducto: number;
+  nombre: string;
+  cantidadVendida: number;
+  montoTotal: string;
+}
+
+export interface DashboardMetrica {
+  actual: number;
+  anterior: number;
+  variacionPorcentual: string;
+}
+
+export interface DashboardResponse {
+  montoTotal: DashboardMetrica;
+  totalVentas: DashboardMetrica;
+  cantidadEntradas: DashboardMetrica;
 }
