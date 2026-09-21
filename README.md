@@ -48,8 +48,11 @@ Abre en `http://localhost:3000`. Ese puerto es fijo: es el único origen autoriz
 | Backend NestJS | **3333** | `VITE_API_URL=http://localhost:3333/api` (es también el valor por defecto) |
 | Agente de voz (FastAPI) | 8000 | `VITE_VOICE_API_URL=http://localhost:8000` |
 
-- El backend tiene que estar en el **3333**: con docker compose ya viene así; si lo corrés a mano, poné `PORT=3333` en el `.env` del backend
-  (sin `PORT` arranca en el 3000 y choca con Vite).
+- El backend tiene que estar en el **3333**: con docker compose ya viene así, y a mano también (es su puerto por defecto; el `.env.example`
+  trae `PORT=3333`).
+- Si el **3000 está ocupado**, `npm run dev` **falla con un error claro** (`--strictPort`) en vez de pasarse al 3001: en otro puerto el login con
+  Google da `origin_mismatch`, porque solo `http://localhost:3000` está autorizado. Liberá el 3000 (casi siempre es otro proceso del proyecto).
+  **No agregues otros orígenes en Google Cloud** para "arreglarlo".
 - `VITE_API_URL` **nunca** debe ser el 3000: ese es el propio frontend y todas las llamadas de datos fallarían. En modo desarrollo la consola
   del navegador avisa si pasa.
 - En `.env.local` también van `VITE_GOOGLE_CLIENT_ID` (login con Google) y las de Cloudinary (subir portadas de películas y productos).

@@ -66,7 +66,7 @@ export const AdminCartelera = () => {
     <div className="p-space-xl flex flex-col gap-space-lg">
       <div className="flex flex-wrap items-center justify-between gap-space-md">
         <div className="flex flex-col gap-space-2xs">
-          <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">CU03 / CU04 • Datos reales</span>
+          <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">Datos reales</span>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Cartelera & Funciones</h1>
         </div>
         <div className="flex items-center gap-space-xs p-space-2xs rounded-xl bg-surface-container-low shadow-inner">

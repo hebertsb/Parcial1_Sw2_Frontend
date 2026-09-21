@@ -121,7 +121,7 @@ export const AdminUsuarios = () => {
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-space-2xs">
           <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">
-            RF11 — Control de Usuarios
+            Control de Usuarios
           </span>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
             Gestión de Usuarios

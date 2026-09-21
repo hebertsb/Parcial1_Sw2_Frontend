@@ -34,7 +34,7 @@ export const AdminAuditoria = () => {
     <div className="p-space-xl flex flex-col gap-space-lg">
       <div className="flex flex-col gap-space-2xs">
         <span className="px-space-xs py-0.5 rounded bg-primary/10 text-primary font-label-code text-label-code uppercase tracking-wider w-fit">
-          RF12 — Datos de Auditoría Enterprise
+          Datos de Auditoría Enterprise
         </span>
         <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
           Auditoría de Acciones y Seguridad

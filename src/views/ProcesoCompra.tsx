@@ -164,7 +164,7 @@ export const ProcesoCompra = () => {
               <div className="flex flex-col">
                 <div className="flex items-center gap-space-xs">
                   <span className="font-label-code text-label-code text-tertiary uppercase tracking-widest bg-tertiary/10 px-space-xs py-space-2xs rounded-full">
-                    Proceso RF-04 Completado
+                    Proceso completado
                   </span>
                   <span className="font-label-code text-label-code text-on-surface-variant">
                     {state.ventaCreada?.metodoPagoElegido === "stripe"
