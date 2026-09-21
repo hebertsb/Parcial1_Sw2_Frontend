@@ -322,9 +322,6 @@ export const AdminReportes = () => {
             a operaciones pagadas y liquidadas.
           </p>
         </div>
-        <span className="px-space-xs py-0.5 rounded bg-secondary/15 text-secondary font-label-code text-label-code uppercase tracking-wider whitespace-nowrap">
-          CU05-RF08 compliant
-        </span>
       </div>
 
       {/* Skeleton loading state */}

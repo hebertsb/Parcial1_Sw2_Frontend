@@ -26,7 +26,7 @@ export const ReportesInsights = ({ insumos }: { insumos: InsumosInsights }) => {
             <Zap className="w-4 h-4" />
           </span>
           <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">
-            Análisis del período &amp; Insights (CU05)
+            Análisis del período &amp; Insights
           </h2>
         </div>
         <span className="font-label-code text-label-code uppercase tracking-wider text-outline">
