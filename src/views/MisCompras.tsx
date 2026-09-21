@@ -31,9 +31,10 @@ const ESTADO_COLOR: Record<EstadoVenta, string> = {
 };
 
 /**
- * RF04 / "mis compras" — historial de ventas del cliente logueado. `GET /ventas` ya
- * viene filtrado por rol (RF11, ver VentasController) y con `funcion`/`pelicula`/`sala`/
- * `promocion` resueltas (ver VentasService.listar) para no pedir nada más por fila. El
+ * RF04 / "mis compras" — historial de ventas de quien tiene la sesión abierta. `GET
+ * /ventas/mis-compras` filtra por el id de la sesión (ver VentasController) y trae
+ * `funcion`/`pelicula`/`sala`/`promocion` resueltas (ver VentasService.listar) para no
+ * pedir nada más por fila. El
  * detalle asiento-a-asiento y de dulcería se pide recién al expandir una compra
  * (`GET /ventas/:id`), no de entrada para las N compras de la lista.
  */
@@ -165,9 +166,20 @@ export const MisCompras = () => {
               key={venta.idVenta}
               className="rounded-2xl bg-surface-container-low shadow-lg overflow-hidden"
             >
-              <button
+              {/* No es un <button>: adentro va el botón «Boleto», y un botón dentro de otro es HTML inválido. */}
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={expandido}
                 onClick={() => void toggleExpandir(venta)}
-                className="w-full flex items-center gap-space-md p-space-md text-left hover:bg-surface-container transition-colors"
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    void toggleExpandir(venta);
+                  }
+                }}
+                className="w-full flex items-center gap-space-md p-space-md text-left hover:bg-surface-container transition-colors cursor-pointer"
               >
                 <img
                   src={
@@ -223,7 +235,7 @@ export const MisCompras = () => {
                 <span className="material-symbols-outlined text-on-surface-variant">
                   {expandido ? "expand_less" : "expand_more"}
                 </span>
-              </button>
+              </div>
 
               {expandido && (
                 <div className="px-space-md pb-space-md border-t border-surface-container">

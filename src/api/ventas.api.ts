@@ -7,11 +7,12 @@ export function crearVenta(input: CrearVentaInput, token: string): Promise<Venta
 }
 
 /**
- * `GET /ventas` — el backend ya filtra por rol (RF11): un `cliente` solo ve las
- * propias, sin que haga falta mandar ningún filtro acá. Usado por `MisCompras.tsx`.
+ * `GET /ventas/mis-compras` — SOLO las compras de la sesión (el id sale del JWT en el backend),
+ * sea cliente o administrador. No se usa `GET /ventas` porque a un administrador le devuelve las
+ * de todos. Usado por `MisCompras.tsx`.
  */
 export function listarMisCompras(token: string): Promise<VentaConFuncion[]> {
-  return apiFetch<VentaConFuncion[]>('/ventas', { token });
+  return apiFetch<VentaConFuncion[]>('/ventas/mis-compras', { token });
 }
 
 /**
