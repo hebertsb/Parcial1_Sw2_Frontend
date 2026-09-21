@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { asociarPromocionAFuncion } from '../../api/promociones.api';
 import { ApiError } from '../../api/client';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Promocion } from '../../core/types/promocion.types';
 import type { Funcion } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
@@ -22,6 +23,14 @@ export const AsociarFuncionForm = ({ token, promocion, funciones, peliculas, onC
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
+
+  // `PromocionesService.getAplicable` (usado al cobrar) solo considera promos activas
+  // y vigentes ESE día — asociar la promo a una función fuera de [fechaInicio, fechaFin]
+  // no es un error de la API (no hay ninguna regla que lo impida), pero el descuento
+  // nunca se va a aplicar en esa función. Se avisa para que no quede así por accidente.
+  const funcionSeleccionada = funciones.find((f) => f.idFuncion === idFuncion);
+  const fueraDeVigencia =
+    !!funcionSeleccionada && (funcionSeleccionada.fecha < promocion.fechaInicio || funcionSeleccionada.fecha > promocion.fechaFin);
 
   const handleAsociar = async () => {
     if (!idFuncion) return;
@@ -63,6 +72,13 @@ export const AsociarFuncionForm = ({ token, promocion, funciones, peliculas, onC
             {guardando ? 'Asociando...' : 'Asociar'}
           </button>
         </div>
+      )}
+
+      {!exito && fueraDeVigencia && funcionSeleccionada && (
+        <AvisoValidacion>
+          Esta función es del {funcionSeleccionada.fecha}, fuera de la vigencia de la promoción ({promocion.fechaInicio} al{' '}
+          {promocion.fechaFin}) — se puede asociar, pero el descuento no se va a aplicar hasta que ajustes esas fechas.
+        </AvisoValidacion>
       )}
 
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}

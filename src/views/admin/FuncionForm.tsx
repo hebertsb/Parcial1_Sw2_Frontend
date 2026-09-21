@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ApiError } from '../../api/client';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Funcion, CrearFuncionInput } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import type { Sala } from '../../core/types/sala.types';
@@ -12,6 +13,8 @@ interface FuncionFormProps {
   peliculas: Pelicula[];
   salas: Sala[];
   precios: Precio[];
+  /** Todas las funciones ya cargadas (sin paginar) — para detectar solapamiento de horario+sala en vivo, antes de guardar. */
+  funciones: Funcion[];
   /** Si viene, el form edita esta función; si no, crea una nueva. */
   funcion?: Funcion;
   guardando: boolean;
@@ -28,7 +31,7 @@ interface FuncionFormProps {
   onCrearPrecioRapido: (valor: number) => Promise<Precio>;
 }
 
-export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, error, onGuardar, onCancelar, onCrearPrecioRapido }: FuncionFormProps) => {
+export const FuncionForm = ({ peliculas, salas, precios, funciones, funcion, guardando, error, onGuardar, onCancelar, onCrearPrecioRapido }: FuncionFormProps) => {
   const [idPelicula, setIdPelicula] = useState(funcion?.idPelicula ?? peliculas[0]?.idPelicula ?? 0);
   const [idSala, setIdSala] = useState(funcion?.idSala ?? salas[0]?.idSala ?? 0);
   const [idPrecio, setIdPrecio] = useState(funcion?.idPrecio ?? precios[0]?.idPrecio ?? 0);
@@ -104,15 +107,47 @@ export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, err
     if (!funcion && idPrecio === 0 && precios[0]) setIdPrecio(precios[0].idPrecio);
   }, [precios, funcion, idPrecio]);
 
+  // `horaInicio`/`horaFin` son "HH:MM" (input type="time"), comparables como string
+  // porque vienen con cero a la izquierda. Se valida en el cliente lo mismo que ya
+  // valida `FuncionesService.validarHoraFinPosterior` en el backend — así el admin lo
+  // ve ANTES de intentar guardar, no después de un 400.
+  const ordenHorarioInvalido = !!horaInicio && !!horaFin && horaFin <= horaInicio;
+
+  /**
+   * Mismo criterio de solapamiento que el `EXCLUDE USING gist` de Postgres sobre
+   * `(id_sala, rango_ocupado)` (ver funcion.entity.ts), pero calculado en el cliente
+   * para avisar en vivo mientras se completa el formulario — el backend sigue siendo la
+   * autoridad final (incluye el margen de limpieza entre funciones, que acá no se
+   * replica). Se ignora la propia función cuando se está editando.
+   */
+  const funcionQueSePisa = useMemo(() => {
+    if (!fecha || !horaInicio || !horaFin || ordenHorarioInvalido) return null;
+    return (
+      funciones.find(
+        (f) =>
+          f.idFuncion !== funcion?.idFuncion &&
+          f.idSala === idSala &&
+          f.fecha === fecha &&
+          f.estado === 'programada' &&
+          horaInicio < f.horaFin.slice(0, 5) &&
+          horaFin > f.horaInicio.slice(0, 5),
+      ) ?? null
+    );
+  }, [funciones, funcion, idSala, fecha, horaInicio, horaFin, ordenHorarioInvalido]);
+
+  const nombreSala = salas.find((s) => s.idSala === idSala)?.nombre ?? `Sala #${idSala}`;
+  const tituloPeliculaQueSePisa = funcionQueSePisa
+    ? peliculas.find((p) => p.idPelicula === funcionQueSePisa.idPelicula)?.titulo ?? `Película #${funcionQueSePisa.idPelicula}`
+    : null;
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (ordenHorarioInvalido || funcionQueSePisa) return;
     onGuardar({ idPelicula, idSala, idPrecio: idPrecio || undefined, fecha, horaInicio, horaFin });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-md">
-      <h2 className="font-headline-sm text-headline-sm text-on-surface">{funcion ? 'Editar función' : 'Nueva función'}</h2>
-
+    <form onSubmit={handleSubmit} className="flex flex-col gap-space-md">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
         <label className="flex flex-col gap-space-2xs">
           <span className={LABEL}>Película</span>
@@ -194,10 +229,24 @@ export const FuncionForm = ({ peliculas, salas, precios, funcion, guardando, err
         </label>
       </div>
 
+      {ordenHorarioInvalido && (
+        <AvisoValidacion tipo="error">La hora de fin tiene que ser posterior a la hora de inicio.</AvisoValidacion>
+      )}
+      {!ordenHorarioInvalido && funcionQueSePisa && (
+        <AvisoValidacion tipo="error">
+          Esta franja se pisa con <strong>«{tituloPeliculaQueSePisa}»</strong> en {nombreSala}, de{' '}
+          {funcionQueSePisa.horaInicio.slice(0, 5)} a {funcionQueSePisa.horaFin.slice(0, 5)}. Elegí otro horario o sala.
+        </AvisoValidacion>
+      )}
+
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
 
       <div className="flex items-center gap-space-sm">
-        <button type="submit" disabled={guardando || peliculas.length === 0 || salas.length === 0} className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={guardando || peliculas.length === 0 || salas.length === 0 || ordenHorarioInvalido || !!funcionQueSePisa}
+          className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50"
+        >
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
         <button type="button" onClick={onCancelar} className="px-space-lg py-space-sm rounded-xl bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-variant transition-all">

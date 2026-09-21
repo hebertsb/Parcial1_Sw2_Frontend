@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { crearPrecio, actualizarPrecio, eliminarPrecio } from '../../api/precios.api';
 import { ApiError } from '../../api/client';
+import { mensajeDeError } from '../../core/mensajesError';
 import type { Precio, CrearPrecioInput } from '../../core/types/precio.types';
 import type { Funcion } from '../../core/types/funcion.types';
 import { PreciosTabla } from './PreciosTabla';
@@ -60,7 +61,7 @@ export const PreciosPanel = ({ token, precios, funciones, cargando, onCambio }: 
       setMostrarForm(false);
       await onCambio();
     } catch (err) {
-      setErrorForm(err instanceof ApiError ? err.message : 'No se pudo guardar el precio.');
+      setErrorForm(mensajeDeError(err, 'No se pudo guardar el precio.'));
     } finally {
       setGuardando(false);
     }

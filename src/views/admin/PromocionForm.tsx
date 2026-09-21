@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Promocion, CrearPromocionInput, TipoDescuento } from '../../core/types/promocion.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
@@ -21,8 +22,14 @@ export const PromocionForm = ({ promocion, guardando, error, onGuardar, onCancel
   const [fechaFin, setFechaFin] = useState(promocion?.fechaFin ?? '');
   const [activa, setActiva] = useState(promocion?.activa ?? true);
 
+  // Fechas `YYYY-MM-DD` (input type="date"), comparables como string.
+  const ordenFechaInvalido = !!fechaInicio && !!fechaFin && fechaFin < fechaInicio;
+  const porcentajeFueraDeRango = tipoDescuento === 'porcentaje' && valor > 100;
+  const hayErrorValidacion = ordenFechaInvalido || porcentajeFueraDeRango;
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (hayErrorValidacion) return;
     onGuardar({
       nombre,
       descripcion: descripcion || undefined,
@@ -77,10 +84,17 @@ export const PromocionForm = ({ promocion, guardando, error, onGuardar, onCancel
         )}
       </div>
 
+      {porcentajeFueraDeRango && (
+        <AvisoValidacion tipo="error">Un descuento porcentual no puede superar 100%.</AvisoValidacion>
+      )}
+      {ordenFechaInvalido && (
+        <AvisoValidacion tipo="error">"Fecha fin" tiene que ser igual o posterior a "Fecha inicio".</AvisoValidacion>
+      )}
+
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
 
       <div className="flex items-center gap-space-sm">
-        <button type="submit" disabled={guardando} className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50">
+        <button type="submit" disabled={guardando || hayErrorValidacion} className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50">
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
         <button type="button" onClick={onCancelar} className="px-space-lg py-space-sm rounded-xl bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-variant transition-all">

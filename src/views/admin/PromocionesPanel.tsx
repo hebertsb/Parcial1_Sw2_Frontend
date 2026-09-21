@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { crearPromocion, actualizarPromocion, eliminarPromocion } from '../../api/promociones.api';
 import { ApiError } from '../../api/client';
+import { mensajeDeError } from '../../core/mensajesError';
 import type { Promocion, CrearPromocionInput } from '../../core/types/promocion.types';
 import type { Funcion } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
@@ -66,7 +67,7 @@ export const PromocionesPanel = ({ token, promociones, funciones, peliculas, car
       setMostrarForm(false);
       await onCambio();
     } catch (err) {
-      setErrorForm(err instanceof ApiError ? err.message : 'No se pudo guardar la promoción.');
+      setErrorForm(mensajeDeError(err, 'No se pudo guardar la promoción.'));
     } finally {
       setGuardando(false);
     }

@@ -1,12 +1,15 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { subirImagen, CloudinaryError } from '../../api/cloudinary.api';
 import { posterFor } from '../../core/posters';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Pelicula, CrearPeliculaInput } from '../../core/types/pelicula.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
 const LABEL = 'font-label-md text-label-md text-outline';
 
 interface PeliculaFormProps {
+  /** Catálogo activo completo — para avisar (sin bloquear) si el título ya existe. */
+  peliculas: Pelicula[];
   /** Si viene, el form edita esta película; si no, crea una nueva. */
   pelicula?: Pelicula;
   guardando: boolean;
@@ -15,7 +18,7 @@ interface PeliculaFormProps {
   onCancelar: () => void;
 }
 
-export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar }: PeliculaFormProps) => {
+export const PeliculaForm = ({ peliculas, pelicula, guardando, error, onGuardar, onCancelar }: PeliculaFormProps) => {
   const [titulo, setTitulo] = useState(pelicula?.titulo ?? '');
   const [genero, setGenero] = useState(pelicula?.genero ?? '');
   const [duracionMin, setDuracionMin] = useState(pelicula?.duracionMin ?? 90);
@@ -53,10 +56,13 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
 
   const previewUrl = posterUrl || (pelicula ? posterFor(pelicula.idPelicula) : undefined);
 
-  return (
-    <form onSubmit={handleSubmit} className="p-space-lg rounded-2xl bg-surface-container-low shadow-lg flex flex-col gap-space-md">
-      <h2 className="font-headline-sm text-headline-sm text-on-surface">{pelicula ? 'Editar película' : 'Nueva película'}</h2>
+  // Solo un aviso, no bloquea: puede ser una reedición o un remake legítimo con el mismo título.
+  const tituloDuplicado = peliculas.some(
+    (p) => p.idPelicula !== pelicula?.idPelicula && p.titulo.trim().toLowerCase() === titulo.trim().toLowerCase(),
+  );
 
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-space-md">
       <div className="flex flex-col md:flex-row gap-space-md">
         <div className="flex flex-col gap-space-2xs items-start shrink-0">
           <span className={LABEL}>Poster</span>
@@ -98,6 +104,10 @@ export const PeliculaForm = ({ pelicula, guardando, error, onGuardar, onCancelar
           </label>
         </div>
       </div>
+
+      {titulo.trim() && tituloDuplicado && (
+        <AvisoValidacion>Ya existe una película activa con el título «{titulo.trim()}». Se puede guardar igual si es intencional.</AvisoValidacion>
+      )}
 
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
 

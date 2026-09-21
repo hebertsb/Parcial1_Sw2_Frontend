@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../controllers/AuthContext';
 import { listarSalas, crearSala, actualizarSala, eliminarSala } from '../../api/salas.api';
 import { ApiError } from '../../api/client';
+import { mensajeDeError } from '../../core/mensajesError';
 import type { Sala, CrearSalaInput } from '../../core/types/sala.types';
 import { SalasTabla } from './SalasTabla';
 import { SalaForm } from './SalaForm';
@@ -70,7 +71,7 @@ export const AdminSalas = () => {
       setMostrarForm(false);
       await cargarSalas();
     } catch (err) {
-      setErrorForm(err instanceof ApiError ? err.message : 'No se pudo guardar la sala.');
+      setErrorForm(mensajeDeError(err, 'No se pudo guardar la sala.'));
     } finally {
       setGuardando(false);
     }
@@ -95,7 +96,7 @@ export const AdminSalas = () => {
       </div>
 
       {mostrarForm && (
-        <SalaForm sala={salaEditando} guardando={guardando} error={errorForm} onGuardar={handleGuardar} onCancelar={() => setMostrarForm(false)} />
+        <SalaForm salas={salas} sala={salaEditando} guardando={guardando} error={errorForm} onGuardar={handleGuardar} onCancelar={() => setMostrarForm(false)} />
       )}
 
       {cargando ? (

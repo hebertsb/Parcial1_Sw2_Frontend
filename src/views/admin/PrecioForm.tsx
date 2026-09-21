@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Precio, CrearPrecioInput } from '../../core/types/precio.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
@@ -17,8 +18,12 @@ export const PrecioForm = ({ precio, guardando, error, onGuardar, onCancelar }: 
   const [vigenteDesde, setVigenteDesde] = useState(precio?.vigenteDesde ?? '');
   const [vigenteHasta, setVigenteHasta] = useState(precio?.vigenteHasta ?? '');
 
+  // Fechas `YYYY-MM-DD` (input type="date"), comparables como string.
+  const ordenFechaInvalido = !!vigenteHasta && vigenteHasta < vigenteDesde;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (ordenFechaInvalido) return;
     onGuardar({ valor, vigenteDesde, vigenteHasta: vigenteHasta || undefined });
   };
 
@@ -45,10 +50,14 @@ export const PrecioForm = ({ precio, guardando, error, onGuardar, onCancelar }: 
         Dejar "Vigente hasta" vacío para que el precio no expire. Se elige al crear una función (pestaña "Cartelera & Funciones"), no por tipo de asiento.
       </p>
 
+      {ordenFechaInvalido && (
+        <AvisoValidacion tipo="error">"Vigente hasta" tiene que ser igual o posterior a "Vigente desde".</AvisoValidacion>
+      )}
+
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
 
       <div className="flex items-center gap-space-sm">
-        <button type="submit" disabled={guardando} className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50">
+        <button type="submit" disabled={guardando || ordenFechaInvalido} className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all disabled:opacity-50">
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
         <button type="button" onClick={onCancelar} className="px-space-lg py-space-sm rounded-xl bg-surface-container-high text-on-surface font-label-lg text-label-lg hover:bg-surface-variant transition-all">

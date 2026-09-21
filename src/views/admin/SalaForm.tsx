@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { AvisoValidacion } from '../../components/widgets/AvisoValidacion';
 import type { Sala, CrearSalaInput } from '../../core/types/sala.types';
 
 const CAMPO = 'h-11 px-space-sm rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm outline-none shadow-inner w-full';
@@ -6,6 +7,8 @@ const CAMPO_DESHABILITADO = 'h-11 px-space-sm rounded-lg bg-surface-container-lo
 const LABEL = 'font-label-md text-label-md text-outline';
 
 interface SalaFormProps {
+  /** Todas las salas — para avisar (sin bloquear) si el nombre ya existe. */
+  salas: Sala[];
   /** Si viene, el form edita esta sala (capacidad/asientosPorFila quedan fijos, no se pueden tocar); si no, crea una nueva. */
   sala?: Sala;
   guardando: boolean;
@@ -14,12 +17,17 @@ interface SalaFormProps {
   onCancelar: () => void;
 }
 
-export const SalaForm = ({ sala, guardando, error, onGuardar, onCancelar }: SalaFormProps) => {
+export const SalaForm = ({ salas, sala, guardando, error, onGuardar, onCancelar }: SalaFormProps) => {
   const [nombre, setNombre] = useState(sala?.nombre ?? '');
   const [capacidad, setCapacidad] = useState(sala?.capacidad ?? 60);
   const [asientosPorFila, setAsientosPorFila] = useState(10);
   const [tipo, setTipo] = useState(sala?.tipo ?? '');
   const [tiempoLimpiezaMin, setTiempoLimpiezaMin] = useState(sala?.tiempoLimpiezaMin ?? 20);
+
+  // Solo un aviso, no bloquea — puede ser intencional (ej. "Sala 1" repetida a propósito).
+  const nombreDuplicado = salas.some(
+    (s) => s.idSala !== sala?.idSala && s.nombre.trim().toLowerCase() === nombre.trim().toLowerCase(),
+  );
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -71,6 +79,10 @@ export const SalaForm = ({ sala, guardando, error, onGuardar, onCancelar }: Sala
         <p className="font-body-sm text-body-sm text-on-surface-variant">
           Los asientos se generan automáticamente al crear la sala, repartidos en filas de "Asientos por fila". No se puede cambiar la capacidad después.
         </p>
+      )}
+
+      {nombre.trim() && nombreDuplicado && (
+        <AvisoValidacion>Ya existe una sala llamada «{nombre.trim()}». Se puede guardar igual si es intencional.</AvisoValidacion>
       )}
 
       {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}

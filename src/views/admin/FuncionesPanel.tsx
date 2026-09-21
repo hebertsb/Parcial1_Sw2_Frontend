@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { crearFuncion, actualizarFuncion, cancelarFuncion } from '../../api/funciones.api';
 import { crearPrecio } from '../../api/precios.api';
-import { ApiError } from '../../api/client';
+import { mensajeDeError } from '../../core/mensajesError';
 import type { Funcion, CrearFuncionInput } from '../../core/types/funcion.types';
 import type { Pelicula } from '../../core/types/pelicula.types';
 import type { Sala } from '../../core/types/sala.types';
 import type { Precio } from '../../core/types/precio.types';
 import { FuncionesTabla } from './FuncionesTabla';
 import { FuncionForm } from './FuncionForm';
+import { Modal } from '../../components/widgets/Modal';
+import { Paginacion } from '../../components/widgets/Paginacion';
+
+const FUNCIONES_POR_PAGINA = 8;
 
 interface FuncionesPanelProps {
   token: string;
@@ -25,6 +29,24 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
   const [funcionEditando, setFuncionEditando] = useState<Funcion | undefined>(undefined);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
+  // Con 300+ funciones cargadas la tabla se volvía un muro de canceladas mezcladas
+  // con programadas — se ocultan por defecto y quedan un click atrás si hacen falta.
+  const [mostrarCanceladas, setMostrarCanceladas] = useState(false);
+  const [pagina, setPagina] = useState(1);
+
+  const funcionesVisibles = mostrarCanceladas ? funciones : funciones.filter((f) => f.estado === 'programada');
+  const totalPaginas = Math.max(1, Math.ceil(funcionesVisibles.length / FUNCIONES_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const funcionesPagina = funcionesVisibles.slice(
+    (paginaSegura - 1) * FUNCIONES_POR_PAGINA,
+    paginaSegura * FUNCIONES_POR_PAGINA,
+  );
+
+  // Cambiar el filtro (o que la lista se achique al cancelar algo) puede dejar la
+  // página actual vacía — se vuelve a la 1 en vez de mostrar una página en blanco.
+  useEffect(() => {
+    setPagina(1);
+  }, [mostrarCanceladas]);
 
   const handleNuevo = () => {
     setFuncionEditando(undefined);
@@ -73,7 +95,7 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
       setMostrarForm(false);
       await onCambio();
     } catch (err) {
-      setErrorForm(err instanceof ApiError ? err.message : 'No se pudo guardar la función.');
+      setErrorForm(mensajeDeError(err, 'No se pudo guardar la función.'));
     } finally {
       setGuardando(false);
     }
@@ -81,16 +103,23 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
 
   return (
     <div className="flex flex-col gap-space-lg">
-      <div className="flex items-center justify-end">
-        {!mostrarForm && (
-          <button
-            onClick={handleNuevo}
-            disabled={cargando}
-            className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all flex items-center gap-space-xs disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined text-[20px]">add_circle</span>Nueva función
-          </button>
-        )}
+      <div className="flex items-center justify-between gap-space-md">
+        <label className="flex items-center gap-space-2xs font-label-md text-label-md text-on-surface-variant cursor-pointer">
+          <input
+            type="checkbox"
+            checked={mostrarCanceladas}
+            onChange={(e) => setMostrarCanceladas(e.target.checked)}
+            className="w-4 h-4 accent-primary"
+          />
+          Mostrar canceladas
+        </label>
+        <button
+          onClick={handleNuevo}
+          disabled={cargando}
+          className="px-space-lg py-space-sm rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container transition-all flex items-center gap-space-xs disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined text-[20px]">add_circle</span>Nueva función
+        </button>
       </div>
 
       {(salas.length === 0 || precios.length === 0) && !cargando && (
@@ -100,23 +129,38 @@ export const FuncionesPanel = ({ token, peliculas, salas, precios, funciones, ca
       )}
 
       {mostrarForm && (
-        <FuncionForm
-          peliculas={peliculas}
-          salas={salas}
-          precios={precios}
-          funcion={funcionEditando}
-          guardando={guardando}
-          error={errorForm}
-          onGuardar={handleGuardar}
-          onCancelar={() => setMostrarForm(false)}
-          onCrearPrecioRapido={handleCrearPrecioRapido}
-        />
+        <Modal titulo={funcionEditando ? 'Editar función' : 'Nueva función'} onCerrar={() => setMostrarForm(false)}>
+          <FuncionForm
+            peliculas={peliculas}
+            salas={salas}
+            precios={precios}
+            funciones={funciones}
+            funcion={funcionEditando}
+            guardando={guardando}
+            error={errorForm}
+            onGuardar={handleGuardar}
+            onCancelar={() => setMostrarForm(false)}
+            onCrearPrecioRapido={handleCrearPrecioRapido}
+          />
+        </Modal>
       )}
 
       {cargando ? (
         <p className="font-label-md text-label-md text-on-surface-variant">Cargando funciones...</p>
+      ) : !mostrarCanceladas && funciones.length > 0 && funcionesVisibles.length === 0 ? (
+        <p className="font-label-md text-label-md text-on-surface-variant">
+          Todas las funciones cargadas están canceladas — activá "Mostrar canceladas" para verlas.
+        </p>
       ) : (
-        <FuncionesTabla funciones={funciones} peliculas={peliculas} salas={salas} onEditar={handleEditar} onCancelar={handleCancelarFuncion} />
+        <>
+          <FuncionesTabla funciones={funcionesPagina} peliculas={peliculas} salas={salas} onEditar={handleEditar} onCancelar={handleCancelarFuncion} />
+          <Paginacion
+            paginaActual={paginaSegura}
+            totalPaginas={totalPaginas}
+            totalItems={funcionesVisibles.length}
+            onCambiarPagina={setPagina}
+          />
+        </>
       )}
     </div>
   );
