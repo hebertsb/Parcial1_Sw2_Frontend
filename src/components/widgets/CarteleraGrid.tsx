@@ -7,10 +7,14 @@ interface CarteleraGridProps {
   error: string | null;
   peliculas: Pelicula[];
   funcionesPorPelicula: Map<number, Funcion[]>;
+  /** false cuando el filtro de sala ya está fijo en un tipo (sería redundante repetirlo en cada horario). */
+  mostrarTipoSala: boolean;
+  /** true si día/sala/horario tienen algún valor elegido — cambia el mensaje de "vacío". */
+  hayFiltroActivo: boolean;
 }
 
 /** Muestra el catálogo real, o el estado que corresponda: error, cargando o vacío. La cartelera es pública — no requiere sesión (ver Cartelera.tsx). */
-export const CarteleraGrid = ({ cargando, error, peliculas, funcionesPorPelicula }: CarteleraGridProps) => {
+export const CarteleraGrid = ({ cargando, error, peliculas, funcionesPorPelicula, mostrarTipoSala, hayFiltroActivo }: CarteleraGridProps) => {
   if (error) {
     return (
       <div className="w-full px-space-lg py-space-2xl flex flex-col items-center gap-space-sm text-center">
@@ -32,7 +36,11 @@ export const CarteleraGrid = ({ cargando, error, peliculas, funcionesPorPelicula
   if (peliculas.length === 0) {
     return (
       <div className="w-full px-space-lg py-space-2xl text-center">
-        <p className="font-label-md text-label-md text-on-surface-variant">No hay películas en cartelera todavía.</p>
+        <p className="font-label-md text-label-md text-on-surface-variant">
+          {hayFiltroActivo
+            ? 'Ninguna función coincide con estos filtros. Probá otro día, sala u horario.'
+            : 'No hay películas en cartelera todavía.'}
+        </p>
       </div>
     );
   }
@@ -40,7 +48,12 @@ export const CarteleraGrid = ({ cargando, error, peliculas, funcionesPorPelicula
   return (
     <div className="w-full px-space-lg py-space-md grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-lg">
       {peliculas.map((pelicula) => (
-        <PeliculaCard key={pelicula.idPelicula} pelicula={pelicula} funciones={funcionesPorPelicula.get(pelicula.idPelicula) ?? []} />
+        <PeliculaCard
+          key={pelicula.idPelicula}
+          pelicula={pelicula}
+          funciones={funcionesPorPelicula.get(pelicula.idPelicula) ?? []}
+          mostrarTipoSala={mostrarTipoSala}
+        />
       ))}
     </div>
   );

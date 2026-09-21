@@ -11,6 +11,8 @@ export interface Funcion {
   horaFin: string;
   tiempoLimpiezaMin: number | null;
   estado: EstadoFuncion;
+  /** GET /funciones la incluye (relations: ['sala']) — null solo si la sala fue borrada. */
+  sala?: { idSala: number; nombre: string; capacidad: number; tipo: string | null } | null;
 }
 
 /** Body de `POST /funciones` / `PATCH /funciones/:id` — misma forma que `CrearFuncionDto` del backend. */

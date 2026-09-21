@@ -10,6 +10,15 @@ import { listarPeliculas } from "../api/peliculas.api";
 import { listarFunciones } from "../api/funciones.api";
 import { Funcion } from "../core/types/funcion.types";
 
+export type FranjaHoraria = "mañana" | "tarde" | "noche";
+
+/** mañana < 15:00, tarde 15:00–19:00, noche >= 19:00. `horaInicio` es `HH:mm:ss`, comparable como string. */
+const franjaDeHora = (horaInicio: string): FranjaHoraria => {
+  if (horaInicio < "15:00:00") return "mañana";
+  if (horaInicio < "19:00:00") return "tarde";
+  return "noche";
+};
+
 export const Cartelera = () => {
   const { state, dispatch } = useCine();
   const { token } = useAuth();
@@ -18,11 +27,18 @@ export const Cartelera = () => {
   >(new Map());
   const [diasDisponibles, setDiasDisponibles] = useState<string[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
+  const [tiposSala, setTiposSala] = useState<{ tipo: string; cantidad: number }[]>([]);
+  const [tipoSalaSeleccionado, setTipoSalaSeleccionado] = useState<string | null>(null);
+  const [franjaSeleccionada, setFranjaSeleccionada] = useState<FranjaHoraria | null>(null);
+  const [textoBusqueda, setTextoBusqueda] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Filtro que puede pedir el agente de voz ("mostrame las de Spider-Man"); el dia tambien se sigue eligiendo a mano.
   const { filtroCartelera, filtrarCartelera } = useUiControl();
-  const busqueda = filtroCartelera?.busqueda?.toLowerCase() ?? null;
+  // El del agente de voz manda si está activo; si no, se usa lo que el usuario tipeó a mano en el buscador.
+  const busqueda =
+    filtroCartelera?.busqueda?.toLowerCase() ??
+    (textoBusqueda.trim() ? textoBusqueda.trim().toLowerCase() : null);
   useEffect(() => {
     if (filtroCartelera) setDiaSeleccionado(filtroCartelera.dia);
   }, [filtroCartelera]);
@@ -47,6 +63,11 @@ export const Cartelera = () => {
           .filter(
             (f) =>
               f.estado === "programada" &&
+              // Defensivo: una función sin horario o sin sala (dato incompleto/corrupto)
+              // no se puede comprar — no tiene sentido mostrarla en la cartelera.
+              !!f.horaInicio &&
+              !!f.idSala &&
+              !!f.sala &&
               new Date(`${f.fecha}T${f.horaInicio}`) >= ahora,
           )
           .sort((a, b) =>
@@ -65,6 +86,16 @@ export const Cartelera = () => {
         setFuncionesPorPelicula(agrupadas);
         setDiasDisponibles(
           Array.from(new Set(futuras.map((f) => f.fecha))).sort(),
+        );
+        const conteoTipos = new Map<string, number>();
+        futuras.forEach((f) => {
+          if (!f.sala?.tipo) return;
+          conteoTipos.set(f.sala.tipo, (conteoTipos.get(f.sala.tipo) ?? 0) + 1);
+        });
+        setTiposSala(
+          Array.from(conteoTipos.entries())
+            .map(([tipo, cantidad]) => ({ tipo, cantidad }))
+            .sort((a, b) => a.tipo.localeCompare(b.tipo)),
         );
         // El backend hace soft-delete (estado='inactiva'), no borrado físico — GET
         // /peliculas devuelve también las inactivas, así que se filtran acá.
@@ -89,24 +120,36 @@ export const Cartelera = () => {
     };
   }, [token, dispatch]);
 
-  const funcionesFiltradasPorDia = diaSeleccionado
-    ? new Map(
-        Array.from(funcionesPorPelicula.entries()).map(
-          ([idPelicula, lista]) => [
-            idPelicula,
-            lista.filter((f) => f.fecha === diaSeleccionado),
-          ],
-        ),
-      )
-    : funcionesPorPelicula;
+  const funcionesFiltradas = new Map(
+    Array.from(funcionesPorPelicula.entries()).map(([idPelicula, lista]) => [
+      idPelicula,
+      lista.filter(
+        (f) =>
+          (!diaSeleccionado || f.fecha === diaSeleccionado) &&
+          (!tipoSalaSeleccionado || f.sala?.tipo === tipoSalaSeleccionado) &&
+          (!franjaSeleccionada || franjaDeHora(f.horaInicio) === franjaSeleccionada),
+      ),
+    ]),
+  );
 
-  const peliculasVisibles = busqueda
-    ? state.peliculas.filter(
-        (p) =>
-          p.titulo.toLowerCase().includes(busqueda) ||
-          (p.genero ?? "").toLowerCase().includes(busqueda),
-      )
-    : state.peliculas;
+  const hayFiltroDeFuncionActivo =
+    !!diaSeleccionado || !!tipoSalaSeleccionado || !!franjaSeleccionada;
+
+  const peliculasVisibles = state.peliculas.filter((p) => {
+    if (busqueda) {
+      const coincide =
+        p.titulo.toLowerCase().includes(busqueda) ||
+        (p.genero ?? "").toLowerCase().includes(busqueda);
+      if (!coincide) return false;
+    }
+    // Con día/sala/horario filtrados, una película sin ninguna función que
+    // encaje no aporta nada mostrada vacía — mejor ocultarla directamente.
+    // Sin filtros activos se sigue mostrando "Sin funciones programadas".
+    if (hayFiltroDeFuncionActivo) {
+      return (funcionesFiltradas.get(p.idPelicula)?.length ?? 0) > 0;
+    }
+    return true;
+  });
 
   return (
     <div className="max-w-[1720px] mx-auto w-full px-space-xl lg:px-space-2xl py-space-xl flex-grow flex flex-col">
@@ -134,6 +177,13 @@ export const Cartelera = () => {
             diasDisponibles={diasDisponibles}
             diaSeleccionado={diaSeleccionado}
             onSeleccionarDia={setDiaSeleccionado}
+            tiposSala={tiposSala}
+            tipoSalaSeleccionado={tipoSalaSeleccionado}
+            onSeleccionarTipoSala={setTipoSalaSeleccionado}
+            franjaSeleccionada={franjaSeleccionada}
+            onSeleccionarFranja={setFranjaSeleccionada}
+            textoBusqueda={textoBusqueda}
+            onCambiarTextoBusqueda={setTextoBusqueda}
           />
         </div>
 
@@ -155,7 +205,7 @@ export const Cartelera = () => {
                 ? `Mostrando ${peliculasVisibles.length} Títulos`
                 : ""}
             </span>
-            {busqueda && (
+            {filtroCartelera?.busqueda && (
               <button
                 onClick={() => filtrarCartelera({ busqueda: null, dia: null })}
                 className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/30 text-secondary font-label-code text-label-code uppercase tracking-wider hover:bg-secondary-container/50 transition-colors"
@@ -174,7 +224,9 @@ export const Cartelera = () => {
           cargando={cargando}
           error={error}
           peliculas={peliculasVisibles}
-          funcionesPorPelicula={funcionesFiltradasPorDia}
+          funcionesPorPelicula={funcionesFiltradas}
+          mostrarTipoSala={tipoSalaSeleccionado === null}
+          hayFiltroActivo={hayFiltroDeFuncionActivo}
         />
 
         <CarteleraPromos />

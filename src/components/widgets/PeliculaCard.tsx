@@ -10,9 +10,11 @@ interface PeliculaCardProps {
   pelicula: Pelicula;
   /** Funciones futuras reales de esta película, ya filtradas/ordenadas por Cartelera.tsx. */
   funciones: Funcion[];
+  /** false cuando ya hay un tipo de sala elegido en el filtro (sería redundante repetirlo en cada horario). */
+  mostrarTipoSala: boolean;
 }
 
-export const PeliculaCard = ({ pelicula, funciones }: PeliculaCardProps) => {
+export const PeliculaCard = ({ pelicula, funciones, mostrarTipoSala }: PeliculaCardProps) => {
   const { dispatch } = useCine();
   const navigate = useNavigate();
   // Lo que el agente de voz esta señalando ("Quiero entradas para X", "a las 8"): la tarjeta se resalta, se centra en
@@ -90,7 +92,7 @@ export const PeliculaCard = ({ pelicula, funciones }: PeliculaCardProps) => {
               Sin funciones programadas
             </span>
           ) : (
-            <div className="grid grid-cols-3 gap-space-2xs">
+            <div className="grid grid-cols-3 gap-space-2xs max-h-[168px] overflow-y-auto pr-0.5">
               {funciones.map((funcion) => (
                 <button
                   key={funcion.idFuncion}
@@ -100,9 +102,14 @@ export const PeliculaCard = ({ pelicula, funciones }: PeliculaCardProps) => {
                       ? "true"
                       : undefined
                   }
-                  className={`py-2 rounded-lg text-center font-headline-sm text-label-lg transition-all duration-300 ${resaltado?.idFuncion === funcion.idFuncion ? "bg-primary text-on-primary ring-4 ring-primary/50 scale-110 shadow-lg animate-pulse" : "bg-surface-container-high hover:bg-primary hover:text-on-primary"}`}
+                  className={`flex flex-col items-center py-2 rounded-lg text-center font-headline-sm text-label-lg transition-all duration-300 ${resaltado?.idFuncion === funcion.idFuncion ? "bg-primary text-on-primary ring-4 ring-primary/50 scale-110 shadow-lg animate-pulse" : "bg-surface-container-high hover:bg-primary hover:text-on-primary"}`}
                 >
-                  {funcion.horaInicio.slice(0, 5)}
+                  <span>{funcion.horaInicio.slice(0, 5)}</span>
+                  {mostrarTipoSala && funcion.sala?.tipo && (
+                    <span className="font-label-code text-label-code opacity-70 uppercase">
+                      {funcion.sala.tipo}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
