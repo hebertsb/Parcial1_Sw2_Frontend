@@ -7,9 +7,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
  * lo mismo (ej. recargar la misma pestaña) cambia el valor y dispara el efecto de la pantalla igual.
  */
 
+/** Turno del día del filtro «Horario» de la cartelera (mismos cortes que `franjaDeHora` de `views/Cartelera.tsx`). */
+export type FranjaFiltro = 'mañana' | 'tarde' | 'noche';
+
+/**
+ * Los filtros que el agente de voz le pone a la cartelera. Siempre viajan COMPLETOS: lo que no viene se quita (así «sin filtros» es
+ * mandar todo en null). `sala` es el tipo exacto de `salas.tipo` (2D, 3D, VIP...), el mismo texto del chip «Sala».
+ */
 export interface FiltroCartelera {
   busqueda: string | null;
   dia: string | null;
+  sala: string | null;
+  franja: FranjaFiltro | null;
   n: number;
 }
 
@@ -49,7 +58,7 @@ interface UiControl {
   refrescos: Record<string, number>;
   refrescar: (tab: string) => void;
   filtroCartelera: FiltroCartelera | null;
-  filtrarCartelera: (filtro: { busqueda?: string | null; dia?: string | null }) => void;
+  filtrarCartelera: (filtro: { busqueda?: string | null; dia?: string | null; sala?: string | null; franja?: FranjaFiltro | null }) => void;
   resaltado: ResaltadoCartelera | null;
   resaltarCartelera: (ids: number[], idFuncion?: number | null) => void;
   resaltadoAdmin: ResaltadoAdmin | null;
@@ -73,8 +82,14 @@ export const UiControlProvider = ({ children }: { children: ReactNode }) => {
   const pedirAdminTab = useCallback((tab: string) => setSolicitudAdminTab((prev) => ({ tab, n: (prev?.n ?? 0) + 1 })), []);
   const refrescar = useCallback((tab: string) => setRefrescos((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 })), []);
   const filtrarCartelera = useCallback(
-    (filtro: { busqueda?: string | null; dia?: string | null }) =>
-      setFiltroCartelera((prev) => ({ busqueda: filtro.busqueda?.trim() || null, dia: filtro.dia ?? null, n: (prev?.n ?? 0) + 1 })),
+    (filtro: { busqueda?: string | null; dia?: string | null; sala?: string | null; franja?: FranjaFiltro | null }) =>
+      setFiltroCartelera((prev) => ({
+        busqueda: filtro.busqueda?.trim() || null,
+        dia: filtro.dia ?? null,
+        sala: filtro.sala?.trim() || null,
+        franja: filtro.franja ?? null,
+        n: (prev?.n ?? 0) + 1,
+      })),
     [],
   );
 

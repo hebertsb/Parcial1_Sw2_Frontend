@@ -56,7 +56,11 @@ export type TipoVentana = 'confirmacion' | 'reporte' | 'ticket';
  */
 export type UiAction =
   | { tipo: 'navegar'; destino: DestinoNavegacion }
-  | { tipo: 'cartelera.filtrar'; busqueda?: string | null; dia?: string | null }
+  /**
+   * Filtros de la cartelera, siempre COMPLETOS (lo que no viaja se quita): `sala` es el tipo exacto de `salas.tipo` (2D, 3D, VIP...) y `franja`
+   * el turno (mañana < 15:00, tarde 15:00–19:00, noche desde las 19:00). Ver back_agent/app/filtros_cartelera.py.
+   */
+  | { tipo: 'cartelera.filtrar'; busqueda?: string | null; dia?: string | null; sala?: string | null; franja?: 'mañana' | 'tarde' | 'noche' | null }
   /** Lleva a la cartelera y RESALTA la(s) pelicula(s) y, si ya se eligio, el horario; espera `pausa_ms` para que se vea. */
   | { tipo: 'cartelera.mostrar'; ids: number[]; idFuncion?: number; pausa_ms?: number; omitir_en_compra?: boolean }
   | { tipo: 'compra.seleccionar_funcion'; pelicula: Pelicula; funcion: Funcion; horario: string }

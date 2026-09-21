@@ -33,6 +33,7 @@ python -c "import wave;w=wave.open('silencio.wav','wb');w.setnchannels(1);w.sets
 
 | Script | Qué comprueba |
 |---|---|
+| `cartelera-filtros.cjs` | **Los filtros de la cartelera que mueve el agente** (día, sala y turno): la pantalla los aplica en los mismos chips que se tocan a mano y muestra las mismas películas que el agente dice (se calcula aparte con las funciones reales); el filtro viaja completo (lo que no viene se quita), «sin filtros» lo limpia, y elegir una película en la compra deja la cartelera filtrada por la sala elegida. No usa el modelo (inyecta las acciones del servidor) y no escribe nada. |
 | `voz-continua.cjs` | **Audio real por el micrófono falso**: el agente entiende la frase, contesta y el navegador reproduce el audio. `MODO=barge` con `barge.wav`: hablarle encima lo corta y la segunda frase se procesa. `PANTALLA="Solo Voz"` o `"Voz + UI"`. |
 | `ui-dinamica.cjs` | La **app real se mueve** con la conversación: compra completa (función, asientos reales, dulcería, resumen con el aviso de no reembolso, ventana flotante arrastrable). Con `ROL=administrador NOMBRE="Admin Lumen"`: ventana de reporte y confirmación de alta de película. **No confirma nada**: cancela en la ventana, así no escribe en la base compartida. |
 | `compra-hablada.cjs` | **La compra entera hablada** (4 frases por el micrófono falso: película, asientos, dulcería, pagar) y el estado final de la app: butacas reales, dulcería, resumen con aviso de no reembolso y ventana de confirmación abierta. No confirma. Es la prueba más cercana a la demo. |

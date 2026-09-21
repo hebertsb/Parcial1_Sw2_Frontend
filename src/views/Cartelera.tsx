@@ -40,7 +40,11 @@ export const Cartelera = () => {
     filtroCartelera?.busqueda?.toLowerCase() ??
     (textoBusqueda.trim() ? textoBusqueda.trim().toLowerCase() : null);
   useEffect(() => {
-    if (filtroCartelera) setDiaSeleccionado(filtroCartelera.dia);
+    // El agente manda los filtros COMPLETOS (día, sala y turno): son los mismos chips que se tocan a mano, y lo que no viene se quita.
+    if (!filtroCartelera) return;
+    setDiaSeleccionado(filtroCartelera.dia);
+    setTipoSalaSeleccionado(filtroCartelera.sala);
+    setFranjaSeleccionada(filtroCartelera.franja);
   }, [filtroCartelera]);
 
   useEffect(() => {
@@ -207,7 +211,7 @@ export const Cartelera = () => {
             </span>
             {filtroCartelera?.busqueda && (
               <button
-                onClick={() => filtrarCartelera({ busqueda: null, dia: null })}
+                onClick={() => filtrarCartelera({ busqueda: null, dia: null, sala: null, franja: null })}
                 className="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-full bg-secondary-container/30 text-secondary font-label-code text-label-code uppercase tracking-wider hover:bg-secondary-container/50 transition-colors"
                 title="Quitar el filtro"
               >

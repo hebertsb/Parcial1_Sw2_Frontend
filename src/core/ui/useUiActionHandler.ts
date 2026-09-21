@@ -139,14 +139,14 @@ export function useUiActionHandler(
             break;
           }
           case 'cartelera.filtrar':
-            if (conPantalla) control.filtrarCartelera({ busqueda: accion.busqueda, dia: accion.dia });
+            if (conPantalla) control.filtrarCartelera({ busqueda: accion.busqueda, dia: accion.dia, sala: accion.sala, franja: accion.franja });
             break;
           case 'cartelera.mostrar':
             if (!conPantalla) break;
             // Si ya esta en los asientos y solo cambia la funcion, no se lo saca de ahi para mostrar la cartelera.
             if (accion.omitir_en_compra && rutaRef.current === '/compra') break;
             ventanas.cerrar('ticket');
-            control.filtrarCartelera({ busqueda: null, dia: null }); // que ningun filtro anterior oculte lo que se va a mostrar
+            control.filtrarCartelera({ busqueda: null, dia: null, sala: null, franja: null }); // que ningun filtro anterior oculte lo que se va a mostrar
             control.resaltarCartelera(accion.ids, accion.idFuncion ?? null);
             irA('/cartelera');
             if (accion.pausa_ms) await esperar(accion.pausa_ms); // se ve la eleccion un momento antes de seguir
